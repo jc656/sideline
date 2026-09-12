@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sideline</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sideline">
+<meta name="theme-color" content="#0B0F14">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14; --panel:#161D26; --panel2:#1F2833; --line:#2E3A48;
+    --text:#F2F6FA; --muted:#93A3B5;
+    --off:#FFAE1A; --def:#31D9C6; --warn:#FF6B4A; --ok:#5FD97A; --link:#5B9BD5;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; background:var(--bg); color:var(--text);}
+  body{font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       font-size:17px; line-height:1.35; padding-bottom:250px;
+       -webkit-user-select:none; user-select:none;}
+  .wrap{max-width:600px; margin:0 auto; padding:0 14px;}
+
+  .tabs{display:flex; border-bottom:1px solid var(--line); margin:0 -14px 14px;
+        padding:env(safe-area-inset-top) 14px 0; position:sticky; top:0; background:var(--bg); z-index:20;}
+  .tabs button{flex:1; background:none; border:0; border-bottom:3px solid transparent;
+               color:var(--muted); font:600 15px 'Barlow',sans-serif; padding:15px 0 12px; cursor:pointer;}
+  .tabs button.on{color:var(--text); border-bottom-color:var(--text);}
+
+  /* header */
+  .gid{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+  .gid div{flex:1; min-width:0;}
+  .gid .team{font-size:15px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .gid .gno{font:700 24px 'Barlow Condensed',sans-serif; line-height:1.1;}
+  .gid button{flex:none; border:2px solid var(--line); background:var(--panel); color:var(--text);
+              border-radius:11px; padding:11px 16px; font:600 15px 'Barlow',sans-serif; cursor:pointer;}
+
+  /* scoreboard */
+  .score{display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+         background:var(--panel); border:1px solid var(--line); border-radius:16px;
+         padding:16px 12px; margin-bottom:14px;}
+  .score .sd{text-align:center;}
+  .score .sd u{display:block; text-decoration:none; font-size:13px; color:var(--muted);
+               font-weight:600; letter-spacing:.04em; margin-bottom:2px;}
+  .score .sd b{font:700 46px 'Barlow Condensed',sans-serif; line-height:1;
+               font-variant-numeric:tabular-nums; display:block;}
+  .score .vs{color:var(--muted); font-size:14px; padding:0 10px;}
+
+
+  .status{border-radius:16px; padding:13px 16px 11px; margin-bottom:12px; border:2px solid;}
+  .strip{display:flex; align-items:center; gap:12px;}
+  .scoreline{display:flex; gap:10px; margin-top:10px; padding-top:10px;
+             border-top:1px solid rgba(255,255,255,.12);}
+  .sl{display:flex; align-items:center; gap:6px; flex:1; justify-content:center;}
+  .sl u{text-decoration:none; font:600 12px 'Barlow',sans-serif; color:var(--muted);
+        letter-spacing:.05em; margin-right:2px;}
+  .sl b{font:700 30px 'Barlow Condensed',sans-serif; min-width:34px; text-align:center;
+        line-height:1; font-variant-numeric:tabular-nums;}
+  .sl button{width:44px; height:44px; border-radius:11px; border:1px solid var(--line);
+             background:var(--panel2); color:var(--text); font-size:17px; cursor:pointer; line-height:1;}
+  .status.offense{background:rgba(255,174,26,.13); border-color:var(--off);}
+  .status.defense{background:rgba(49,217,198,.13); border-color:var(--def);}
+  .status .side{font:700 23px 'Barlow Condensed',sans-serif; line-height:1; flex:none;}
+  .status.offense .side{color:var(--off);} .status.defense .side{color:var(--def);}
+  .status .sub{font-size:13.5px; color:var(--muted); flex:1; min-width:0; line-height:1.2;}
+  .status .dn{margin-left:auto; text-align:right;}
+  .status .dn b{font:700 28px 'Barlow Condensed',sans-serif; display:block; line-height:1;
+                font-variant-numeric:tabular-nums;}
+  .status .dn span{font-size:13px; color:var(--muted);}
+
+  h2{margin:0 0 12px; font-size:14px; font-weight:600; color:var(--muted);
+     display:flex; justify-content:space-between; align-items:baseline;}
+  h2 em{font-style:normal; font-weight:500;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:16px;
+        padding:16px; margin-bottom:14px;}
+
+  .chips{display:flex; flex-wrap:wrap; gap:9px;}
+  .chip{position:relative; width:66px; height:66px; border-radius:14px; border:2px solid var(--line);
+        background:var(--panel2); color:var(--text); cursor:pointer; padding:0;
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        transition:transform .08s;}
+  .chip:active{transform:scale(.92);}
+  .chip b{font:700 30px 'Barlow Condensed',sans-serif; line-height:1; font-variant-numeric:tabular-nums;}
+  .chip i{font-style:normal; font-size:13px; font-weight:600; color:var(--muted); margin-top:3px;}
+  .field .chip{border-color:#4A5D72; background:#28323E;}
+  .chip.short{border-color:var(--warn);} .chip.short i{color:var(--warn);}
+  .chip.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
+  .chip.swout{border-color:var(--warn); background:rgba(255,107,74,.18); opacity:1;}
+  .chip.swout i{color:var(--warn); font-weight:700; font-size:11px;}
+  .chip.swin{border-color:var(--ok); background:rgba(95,217,122,.18); opacity:1;}
+  .chip.swin i{color:var(--ok); font-weight:700; font-size:11px;}
+  .bench .chip{opacity:.75;}
+
+  .next{border:2px solid var(--line);}
+  .counter{display:flex; align-items:center; gap:16px; margin-bottom:14px;}
+  .cnum{display:flex; align-items:baseline; gap:7px; flex:none;}
+  .cnum b{font:700 62px 'Barlow Condensed',sans-serif; line-height:.85;
+          font-variant-numeric:tabular-nums;}
+  .cnum span{font:600 17px 'Barlow',sans-serif; color:var(--muted);}
+  .cmsg{min-width:0; flex:1;}
+  .ctitle{font:600 18px 'Barlow',sans-serif; line-height:1.2;}
+  .csub{font-size:14.5px; color:var(--muted); margin-top:3px;}
+
+  /* swap due: the whole card lights up */
+  .next.due{border-color:var(--off); background:rgba(255,174,26,.16);
+            animation:pulse 1.25s ease-in-out infinite;}
+  /* when a swap is due the banner takes over the whole card */
+  .next.due .counter{display:block; text-align:center; margin-bottom:10px;}
+  .next.due .cnum{justify-content:center; margin-bottom:2px;}
+  .next.due .cnum b{color:var(--off); font-size:40px;}
+  .next.due .cnum span{color:var(--off); font-size:15px;}
+  .next.due .ctitle{color:var(--off); font:700 46px 'Barlow Condensed',sans-serif;
+                    letter-spacing:.02em; line-height:.95;}
+  .next.due .csub{font-size:16px; color:var(--text);}
+  .next.due .nums b{border-color:var(--off);}
+  .next.due #btnSub{background:var(--off); color:#0B0F14; font-size:20px; padding:18px;}
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,174,26,0);}
+    50%{box-shadow:0 0 0 5px rgba(255,174,26,.28);}
+  }
+  .snap.duering{box-shadow:0 0 0 4px rgba(255,174,26,.55);}
+  @media (prefers-reduced-motion:reduce){ .next.due{animation:none; box-shadow:0 0 0 4px rgba(255,174,26,.3);} }
+  .nums{display:flex; gap:10px; align-items:center; margin-bottom:8px;}
+  .nums u{text-decoration:none; font-size:13px; color:var(--muted); width:30px; flex:none; font-weight:600;}
+  .nums>span{display:flex; gap:7px; flex-wrap:wrap; flex:1; min-width:0;}
+  .nums b{font:700 27px 'Barlow Condensed',sans-serif; min-width:44px; min-height:44px;
+          display:inline-flex; align-items:center; justify-content:center;
+          padding:8px 8px; border-radius:10px; background:var(--panel2); border:1px solid var(--line);
+          font-variant-numeric:tabular-nums; cursor:pointer; -webkit-tap-highlight-color:transparent;}
+  .nums b:active{opacity:.6; transform:scale(.92);}
+
+  button.big{width:100%; border:0; border-radius:14px; padding:18px; cursor:pointer;
+             font:600 18px 'Barlow',sans-serif; margin-top:12px;}
+  .fill{background:var(--text); color:#0B0F14;}
+  .outline{background:transparent; border:2px solid var(--line); color:var(--text);}
+  .go{background:var(--ok); color:#0B0F14; font-size:21px; padding:24px;}
+  button.big:disabled{opacity:.35;}
+  #btnSub:disabled{opacity:1; background:var(--panel2); color:var(--muted); font-size:16px;}
+
+  .alert{display:flex; gap:12px; background:rgba(255,107,74,.14);
+         border:2px solid var(--warn); border-radius:14px; padding:14px 16px; margin-bottom:14px;
+         font-size:15px;}
+  .alert b{color:var(--warn);}
+
+  .row{display:grid; grid-template-columns:44px 1fr 88px; gap:12px; align-items:center;
+       padding:11px 0; border-bottom:1px solid var(--line);}
+  .row:last-of-type{border-bottom:0;}
+  .row.out{opacity:.4;}
+  .rn{font:700 26px 'Barlow Condensed',sans-serif; margin:0; font-variant-numeric:tabular-nums;}
+  .bar{height:12px; border-radius:6px; background:var(--panel2); overflow:hidden; display:flex;}
+  .bar u{display:block; height:100%; text-decoration:none;}
+  .bo{background:var(--off);} .bd{background:var(--def);}
+  .cap{font-size:14px; color:var(--muted); margin-top:4px;}
+  .rt{text-align:right; font-size:13px; color:var(--muted);}
+  .rt b{display:block; font:700 24px 'Barlow Condensed',sans-serif; color:var(--text); line-height:1;
+        font-variant-numeric:tabular-nums;}
+  .rt b.short{color:var(--warn);}
+
+  .set{display:flex; justify-content:space-between; align-items:center; gap:14px;
+       padding:15px 0; border-bottom:1px solid var(--line);}
+  .set:last-of-type{border-bottom:0;}
+  .set p{margin:0; font-size:17px; font-weight:600;}
+  .set p em{display:block; font-style:normal; font-size:14.5px; color:var(--muted);
+            font-weight:400; margin-top:2px;}
+  .step{display:flex; align-items:center; gap:4px; flex:none;}
+  .step button{width:46px; height:46px; border-radius:12px; border:2px solid var(--line);
+               background:var(--panel2); color:var(--text); font-size:24px; cursor:pointer; line-height:1;}
+  .step b{width:40px; text-align:center; font:700 26px 'Barlow Condensed',sans-serif;
+          font-variant-numeric:tabular-nums;}
+  .seg{display:flex; flex:none; border:2px solid var(--line); border-radius:12px; overflow:hidden;}
+  .seg button{background:var(--panel2); color:var(--muted); border:0; padding:12px 14px;
+              font:600 15px 'Barlow',sans-serif; cursor:pointer;}
+  .seg button.on{background:var(--text); color:#0B0F14;}
+
+  input[type=text],textarea{width:100%; background:var(--panel2); border:2px solid var(--line);
+    color:var(--text); border-radius:12px; padding:14px; font:500 16px 'Barlow',sans-serif;
+    -webkit-user-select:text; user-select:text;}
+  textarea{min-height:96px; font-size:13px; font-family:ui-monospace,Menlo,monospace; resize:vertical;}
+
+  .dock{position:fixed; left:0; right:0; bottom:0;
+        background:linear-gradient(180deg,rgba(11,15,20,.72),var(--bg) 22%);
+        padding:10px 14px calc(14px + env(safe-area-inset-bottom)); z-index:30;}
+  .dockin{max-width:600px; margin:0 auto;}
+  .snap{width:100%; border:0; border-radius:18px; height:94px; cursor:pointer; color:#0B0F14;
+        font:700 34px 'Barlow Condensed',sans-serif; letter-spacing:.02em;}
+  .snap[data-m=offense]{background:var(--off);} .snap[data-m=defense]{background:var(--def);}
+  .snap small{display:block; font:600 14px 'Barlow',sans-serif; opacity:.72; letter-spacing:0; margin-top:3px;}
+  .snap:active{filter:brightness(.85);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:9px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin-top:9px;}
+  .grid2 button,.grid3 button{border:2px solid var(--line); background:var(--panel); color:var(--text);
+    border-radius:13px; height:62px; cursor:pointer; padding:0 4px;
+    font:600 16px 'Barlow',sans-serif; line-height:1.15;}
+  .grid2 button small,.grid3 button small{display:block; font-size:12.5px; color:var(--muted);
+    font-weight:500; margin-top:2px;}
+  .grid2 button:active,.grid3 button:active{background:var(--panel2);}
+  .grid2 button:disabled{opacity:.32;}
+  .pat{border-color:var(--ok) !important; color:var(--ok) !important;}
+  .flash{position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:99;
+         transition:opacity .13s;}
+  .steps{display:flex; gap:8px; margin-bottom:14px;}
+  .steps span{flex:1; height:5px; border-radius:3px; background:var(--line);}
+  .steps span.on{background:var(--ok);}
+  .modal{position:fixed; inset:0; background:rgba(11,15,20,.94); z-index:200;
+         display:flex; align-items:center; justify-content:center; padding:20px;}
+  .pinbox{width:100%; max-width:340px;}
+  .pintitle{font:700 26px 'Barlow Condensed',sans-serif; text-align:center;}
+  .pinsub{font-size:15px; color:var(--muted); text-align:center; margin-top:4px; min-height:21px;}
+  .pinsub.bad{color:var(--warn);}
+  .pindots{display:flex; gap:14px; justify-content:center; margin:22px 0 26px;}
+  .pindots span{width:16px; height:16px; border-radius:50%; border:2px solid var(--line);}
+  .pindots span.on{background:var(--text); border-color:var(--text);}
+  .pinpad{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  .pinpad button{height:64px; border-radius:14px; border:2px solid var(--line);
+                 background:var(--panel2); color:var(--text); cursor:pointer;
+                 font:700 26px 'Barlow Condensed',sans-serif;}
+  .pinpad button.alt{font:600 15px 'Barlow',sans-serif; color:var(--muted);}
+  .pinpad button:active{background:var(--panel);}
+  .hide{display:none;}
+  .hint{font-size:15px; color:var(--muted); margin:12px 0 0;}
+  .ok{color:var(--ok);}
+  @media (prefers-reduced-motion:reduce){ .flash{transition:none;} }
+</style>
+</head>
+<body>
+
+<div class="flash" id="flash"></div>
+
+<div class="modal hide" id="pinModal">
+  <div class="pinbox">
+    <div class="pintitle" id="pinTitle">Enter your code</div>
+    <div class="pinsub" id="pinSub"></div>
+    <div class="pindots" id="pinDots"></div>
+    <div class="pinpad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="x" class="alt">Cancel</button><button data-k="0">0</button>
+      <button data-k="d" class="alt">Delete</button>
+    </div>
+    <button id="btnForgotPin" class="hide" style="width:100%;background:none;border:0;color:var(--muted);
+      font:500 15px 'Barlow',sans-serif;margin-top:18px;cursor:pointer;padding:8px">Forgot your code?</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="tabs">
+    <button id="tGame" class="on">Game</button>
+    <button id="tTeam">Team</button>
+    <button id="tSetup">Setup</button>
+    <button id="tSeason">Season</button>
+  </div>
+
+  <!-- =============== GAME =============== -->
+  <div id="vGame">
+    <div class="gid">
+      <div>
+        <div class="team" id="teamName"></div>
+        <div class="gno" id="gameNo"></div>
+      </div>
+      <button id="btnEnd" class="hide">End game</button>
+    </div>
+
+    <div id="preGame" class="hide">
+      <div class="steps" id="stepDots"></div>
+
+      <div class="card" id="step1">
+        <h2>Who's here today <em id="wizHere"></em></h2>
+        <div class="chips bench" id="wizAtt"></div>
+        <button class="big fill" id="btnStep1">Next: pick who starts</button>
+        <p class="hint">Tap anyone who didn't make it. You can check a late arrival in once the game is going.</p>
+      </div>
+
+      <div class="card hide" id="step2">
+        <h2>Who starts <em id="wizStartMeta"></em></h2>
+        <div class="chips bench" id="wizStart"></div>
+        <button class="big outline" id="btnWizRandom">Pick a random group</button>
+        <button class="big fill" id="btnStep2" disabled>Next: set the rotation</button>
+        <button class="big outline" id="btnBack1">Back</button>
+      </div>
+
+      <div class="card hide" id="step3">
+        <h2>How the rotation runs</h2>
+        <div class="set">
+          <p>Swapped at a time<em>How many come off together</em></p>
+          <div class="step"><button data-s="subSize" data-d="-1">&minus;</button><b id="wSubSize"></b><button data-s="subSize" data-d="1">+</button></div>
+        </div>
+        <div class="set">
+          <p id="wTrigLabel">Swap every<em id="wTrigSub"></em></p>
+          <div class="step"><button data-s="interval" data-d="-1">&minus;</button><b id="wInterval"></b><button data-s="interval" data-d="1">+</button></div>
+        </div>
+        <div class="set">
+          <p>Count in<em>Possessions keep kids from swapping mid&#8209;drive</em></p>
+          <div class="seg"><button id="btnTrigPlay2">Plays</button><button id="btnTrigPoss2">Possessions</button></div>
+        </div>
+        <p class="hint" id="wizSummary"></p>
+        <button class="big go" id="btnStart">Start the game</button>
+        <button class="big outline" id="btnBack2">Back</button>
+      </div>
+    </div>
+
+    <div id="liveGame">
+      <div class="status offense" id="status">
+        <div class="strip">
+          <div class="side" id="sideLabel">OFFENSE</div>
+          <div class="sub" id="sideSub"></div>
+          <div class="dn"><b id="downNum">1st</b><span>down</span></div>
+        </div>
+        <div class="scoreline">
+          <span class="sl"><u>US</u>
+            <button data-sc="us" data-d="-1">&minus;</button>
+            <b id="usScore">0</b>
+            <button data-sc="us" data-d="1">+</button></span>
+          <span class="sl"><u>THEM</u>
+            <button data-sc="them" data-d="-1">&minus;</button>
+            <b id="themScore">0</b>
+            <button data-sc="them" data-d="1">+</button></span>
+        </div>
+      </div>
+
+      <div class="card next" id="nextCard">
+        <div class="counter">
+          <div class="cnum"><b id="cSince">0</b><span id="cOf">of 3</span></div>
+          <div class="cmsg"><div class="ctitle" id="cTitle">Plays this rotation</div>
+            <div class="csub" id="cSub"></div></div>
+        </div>
+        <div class="nums"><u>In</u><span id="inNums"></span></div>
+        <div class="nums"><u>Out</u><span id="outNums"></span></div>
+        <button class="big fill" id="btnSub">Make these subs</button>
+        <div id="subExtra"></div>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <div class="card">
+        <h2>On field <em id="fieldMeta"></em></h2>
+        <div class="chips field" id="fieldChips"></div>
+        <h2 style="margin:18px 0 12px">Bench <em id="benchMeta"></em></h2>
+        <div class="chips bench" id="benchChips"></div>
+        <p class="hint">Tap players to change the swap. Match the same number in and out.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== TEAM =============== -->
+  <div id="vTeam" class="hide">
+    <div class="card">
+      <h2>Playing time <em>fewest first</em></h2>
+      <div id="timeTable"></div>
+      <p class="hint"><span style="color:var(--off)">&#9646;</span> offense &nbsp;
+        <span style="color:var(--def)">&#9646;</span> defense</p>
+    </div>
+    <div class="card">
+      <h2>Who's here <em id="hereMeta"></em></h2>
+      <div class="chips bench" id="attChips"></div>
+      <p class="hint">Tap to check a kid in or out. Works mid-game &mdash; anyone who leaves the field is replaced right away, and a late arrival slots into the rotation at his number.</p>
+    </div>
+    <div class="card">
+      <h2>Names <em>optional</em></h2>
+      <div id="names"></div>
+      <button class="big outline" id="btnAddPlayer">Add another number</button>
+    </div>
+  </div>
+
+  <!-- =============== SETUP =============== -->
+  <div id="vSetup" class="hide">
+    <div class="card">
+      <h2>Your team</h2>
+      <input type="text" id="teamInput" placeholder="3rd Grade Flag, Commanders">
+      <p class="hint">Shows on the game screen and on every saved game.</p>
+    </div>
+
+    <div class="card">
+      <h2>How the rotation runs</h2>
+      <div class="set">
+        <p>Swapped at a time<em>How many come off together</em></p>
+        <div class="step"><button data-s="subSize" data-d="-1">&minus;</button><b id="vSubSize"></b><button data-s="subSize" data-d="1">+</button></div>
+      </div>
+      <div class="set">
+        <p id="trigLabel">Swap every<em id="trigSub"></em></p>
+        <div class="step"><button data-s="interval" data-d="-1">&minus;</button><b id="vInterval"></b><button data-s="interval" data-d="1">+</button></div>
+      </div>
+      <div class="set">
+        <p>Count in<em>Possessions keep kids from swapping mid&#8209;drive</em></p>
+        <div class="seg"><button id="btnTrigPlay">Plays</button><button id="btnTrigPoss">Possessions</button></div>
+      </div>
+      <div class="set">
+        <p>Who goes in next<em id="rotSub"></em></p>
+        <div class="seg"><button id="btnRotSeq">In order</button><button id="btnRotCatch">Catch-up</button></div>
+      </div>
+      <div class="set">
+        <p>Flag a kid this far behind<em id="gapSub">Compared to whoever has played most</em></p>
+        <div class="step"><button data-s="gapLimit" data-d="-1">&minus;</button><b id="vGap"></b><button data-s="gapLimit" data-d="1">+</button></div>
+      </div>
+      <button class="big outline" id="btnResetCounter">Reset the count to the next swap</button>
+    </div>
+
+    <div class="card">
+      <h2>Lock code <em id="pinState"></em></h2>
+      <p class="hint" style="margin-top:0">A 4-digit code before starting a game, ending one, deleting one, or loading a handoff. It stops a stray tap from wiping a game &mdash; it isn't real security, and the code is stored in plain text on this phone.</p>
+      <button class="big outline" id="btnSetPin">Set a code</button>
+      <button class="big outline hide" id="btnClearPin">Turn the code off</button>
+      <button class="big outline hide" id="btnLockNow">Lock now</button>
+    </div>
+
+    <div class="card">
+      <h2>Hand off to another coach</h2>
+      <p class="hint" style="margin-top:0">Makes a link that carries the whole game &mdash; score, play counts, who's on the field. Text it over and they pick up exactly where you left off. Only one person runs the game at a time, so once you hand off, stop tapping on your phone.</p>
+      <button class="big fill" id="btnHandoff">Copy the handoff link</button>
+      <div id="handoffOut" class="hide" style="margin-top:12px">
+        <textarea id="handoffText" readonly></textarea>
+        <p class="hint ok" id="handoffNote"></p>
+      </div>
+      <button class="big outline" id="btnTakeover">Take over from a link</button>
+      <div id="takeoverBox" class="hide" style="margin-top:12px">
+        <textarea id="takeoverText" placeholder="Paste the link or code here"></textarea>
+        <button class="big fill" id="btnTakeoverGo">Load that game</button>
+        <p class="hint" id="takeoverNote"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Backup &amp; restore</h2>
+      <p class="hint" style="margin-top:0">Download a full backup of everything &mdash; roster, settings, all saved games. Import it on another device or after a reset.</p>
+      <button class="big fill" id="btnBackupExport">Download backup</button>
+      <button class="big outline" id="btnBackupImport" style="margin-top:9px">Import a backup</button>
+      <input type="file" id="backupFile" accept=".json" class="hide">
+      <p class="hint" id="backupNote"></p>
+    </div>
+
+    <div class="card">
+      <h2>Reset everything</h2>
+      <p class="hint" style="margin-top:0;color:var(--warn)">Wipes all data &mdash; roster, games, settings, everything. This cannot be undone. Download a backup first if you might want it back.</p>
+      <div id="resetBox" class="hide" style="margin-top:12px">
+        <p class="hint" style="margin-top:0">Type <b style="color:var(--warn)">RESET</b> to confirm.</p>
+        <input type="text" id="resetConfirm" placeholder="Type RESET" autocomplete="off">
+        <button class="big outline" id="btnResetGo" disabled style="margin-top:9px;border-color:var(--warn);color:var(--warn)">Wipe everything</button>
+      </div>
+      <button class="big outline" id="btnResetReveal" style="border-color:var(--warn);color:var(--warn)">Reset everything</button>
+    </div>
+  </div>
+
+  <!-- =============== SEASON =============== -->
+  <div id="vSeason" class="hide">
+    <div class="card">
+      <h2>Season totals <em id="seasonCount"></em></h2>
+      <div id="seasonTable"></div>
+    </div>
+    <div class="card" id="scheduleCard">
+      <h2>Schedule <em id="schedMeta"></em></h2>
+      <div id="gameList"></div>
+      <div class="set" style="margin-top:6px">
+        <p>Games this season<em>Tap any week to open it</em></p>
+        <div class="step"><button data-s="weeks" data-d="-1">&minus;</button><b id="vWeeks"></b><button data-s="weeks" data-d="1">+</button></div>
+      </div>
+    </div>
+
+    <div class="card hide" id="detailCard">
+      <h2><span id="detTitle"></span> <em id="detDate"></em></h2>
+      <div class="score" style="margin:0 0 14px">
+        <div class="sd"><u>US</u><b id="detUs">0</b></div>
+        <div class="vs">&ndash;</div>
+        <div class="sd"><u>THEM</u><b id="detThem">0</b></div>
+      </div>
+      <p class="hint" style="margin-top:0" id="detMeta"></p>
+      <h2 style="margin:18px 0 12px">Who played what</h2>
+      <div id="detTable"></div>
+      <button class="big outline" id="btnDetBack">Back to the schedule</button>
+      <button class="big outline" id="btnDetDelete">Delete this game</button>
+    </div>
+    <div class="card">
+      <h2>Export</h2>
+      <button class="big outline" id="btnExport">Download a spreadsheet</button>
+      <p class="hint" id="exportNote">One row per kid per game, with the score. Opens in Excel or Sheets.</p>
+    </div>
+  </div>
+</div>
+
+<div class="dock hide" id="dock">
+  <div class="dockin">
+    <button class="snap" id="btnSnap" data-m="offense"></button>
+    <div class="grid2" id="normalRow">
+      <button id="btnFirst">First down<small>counts, back to 1st</small></button>
+      <button id="btnTD">Touchdown<small>6 points</small></button>
+      <button id="btnTurn">Possession<small id="turnSub"></small></button>
+      <button id="btnUndo">Undo<small id="undoSub">nothing yet</small></button>
+    </div>
+    <div class="grid3 hide" id="patRow">
+      <button class="pat" id="btnPat1">Extra point<small>+1</small></button>
+      <button class="pat" id="btnPat2">Two points<small>+2</small></button>
+      <button id="btnPat0">No good<small>+0</small></button>
+    </div>
+    <div class="grid2 hide" id="fourthRow">
+      <button class="pat" id="btn4First">First down<small>drive continues</small></button>
+      <button class="pat" id="btn4TD">Touchdown<small>6 points</small></button>
+      <button class="pat" id="btn4Turn">Turnover on downs<small id="turn4Sub"></small></button>
+      <button id="btn4Back">Back<small>no play yet</small></button>
+    </div>
+  </div>
+</div>
+
+<script>
+var S = {
+  team: '', roster: [], present: [], field: [], stats: {}, entry: {}, tick: 0,
+  starters: [], started: null, live: false,
+  fieldSize: 6, subSize: 3, interval: 3, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
+  mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
+  weeks: 8, slot: 1, pin: ''
+};
+var season = [], undoStack = [], lastAction = '', sel = {field:null, bench:null, start:[]};
+var pending = { inL: [], outL: [], auto: true };
+var LIM = { weeks:[1,20], subSize:[1,6], interval:[1,12], gapLimit:[2,20] };
+var ORD = ['1st','2nd','3rd','4th'];
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ---------- storage ---------- */
+var storageOk = true;
+function put(k,v){
+  try{
+    localStorage.setItem(k, JSON.stringify(v));
+  }catch(e){
+    storageOk = false;
+    showStorageWarning();
+  }
+}
+function showStorageWarning(){
+  if (document.getElementById('storageBanner')) return;
+  var b = document.createElement('div');
+  b.id = 'storageBanner';
+  b.style.cssText = 'position:relative;z-index:21;background:#c0392b;color:#fff;' +
+    'padding:calc(8px + env(safe-area-inset-top)) 40px 8px 16px;font:600 14px/1.3 Barlow,sans-serif;text-align:center;';
+  b.textContent = 'Your game won\u2019t be saved. Close this tab, open a regular Safari tab (not Private), and come back.';
+  var x = document.createElement('button');
+  x.textContent = '\u00d7';
+  x.style.cssText = 'position:absolute;top:calc(4px + env(safe-area-inset-top));right:8px;background:none;border:0;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;';
+  x.onclick = function(){ b.remove(); };
+  b.appendChild(x);
+  document.body.insertBefore(b, document.body.firstChild);
+}
+function save(){ put('fb:state', S); }
+function saveSeason(){ put('fb:season', season); }
+function grab(k){
+  return Promise.resolve().then(function(){
+    // try localStorage first
+    var raw = null;
+    try{ raw = localStorage.getItem(k); }catch(e){}
+    if (raw !== null) return JSON.parse(raw);
+    // fall back to window.storage (Claude artifact sandbox)
+    if (window.storage && typeof window.storage.get === 'function'){
+      return window.storage.get(k).then(function(r){
+        return r && r.value ? JSON.parse(r.value) : null;
+      });
+    }
+    return null;
+  }).catch(function(){ return null; });
+}
+
+function load(){
+  return Promise.all([grab('fb:state'), grab('fb:season')]).then(function(res){
+    if (res[0]) { for (var k in res[0]) S[k] = res[0][k]; }
+    if (res[1]) season = res[1];
+    if (!S.roster.length) {
+      S.roster = [];
+      for (var i=1;i<=12;i++) S.roster.push({num:i, name:''});
+    }
+    if (!S.present.length) S.present = S.roster.map(function(p){ return p.num; });
+    S.present.forEach(function(n){ if(!S.stats[n]) S.stats[n] = {off:0, def:0}; });
+    if (!S.field.length) S.field = randomStart();
+    if (!S.slot || (!S.live && gameByNo(S.slot))) S.slot = nextOpenSlot();
+    checkIncomingLink();
+    render();
+  });
+}
+
+/* ---------- helpers ---------- */
+function order(){ return S.present.slice().sort(function(a,c){ return a-c; }); }
+function bench(){ return S.present.filter(function(n){ return S.field.indexOf(n) < 0; }); }
+function total(n){ var s = S.stats[n] || {}; return (s.off||0) + (s.def||0); }
+function leader(){ return Math.max.apply(null, [0].concat(S.present.map(total))); }
+function behindBy(n){ return leader() - total(n); }
+function everyoneIn(){ return S.play > 0 && S.present.every(function(n){ return total(n) > 0; }); }
+// Following the rotation exactly still opens a gap: a group sits out
+// ceil(bench/subSize) swaps while the leader keeps playing. Only flag what goes
+// beyond that (+2 slack for a PAT or a late swap). Possessions have no fixed
+// play count, so that trigger uses the Setup number as-is.
+function naturalGap(){
+  if (S.trigger !== 'plays') return 0;
+  var b = Math.max(0, S.present.length - S.fieldSize);
+  return b ? Math.ceil(b / Math.max(1, S.subSize)) * S.interval + 2 : 0;
+}
+function gapLimit(){ return Math.max(S.gapLimit, naturalGap()); }
+function short(n){ return everyoneIn() && behindBy(n) >= gapLimit(); }
+function shortList(){
+  return S.present.filter(short).sort(function(a,c){ return total(a)-total(c) || a-c; });
+}
+function assign(l){ l.forEach(function(n){ S.entry[n] = ++S.tick; }); }
+function gameByNo(n){
+  for (var i=0;i<season.length;i++) if (season[i].no === n) return season[i];
+  return null;
+}
+function nextOpenSlot(){
+  for (var n=1; n<=S.weeks; n++) if (!gameByNo(n)) return n;
+  return S.weeks;
+}
+function gameNumber(){ return S.slot || 1; }
+function slotState(n){
+  if (gameByNo(n)) return 'final';
+  if (S.live && S.slot === n) return 'live';
+  return 'open';
+}
+var ON_FIELD = 6;
+// 6 a side, unless fewer than 6 kids showed up
+function syncFieldSize(){
+  S.fieldSize = Math.min(ON_FIELD, Math.max(1, S.present.length));
+  // can't swap more kids than are sitting
+  var benchSize = Math.max(0, S.present.length - S.fieldSize);
+  if (benchSize > 0 && S.subSize > benchSize) S.subSize = benchSize;
+}
+
+function snapshot(label){
+  undoStack.push(JSON.stringify({S:S, sel:sel, label:lastAction}));
+  lastAction = label || '';
+  if (undoStack.length > 20) undoStack.shift();
+}
+function undo(){
+  var s = undoStack.pop(); if (!s) return;
+  var p = JSON.parse(s);
+  for (var k in p.S) S[k] = p.S[k];
+  sel = p.sel; lastAction = p.label || '';
+  pending = { inL: [], outL: [], auto: true };
+  render(); save();
+}
+function blink(strong){
+  var f = $('flash'); f.style.opacity = strong ? '.42' : '.2';
+  setTimeout(function(){ f.style.opacity = '0'; }, strong ? 110 : 60);
+  if (navigator.vibrate){
+    try{ navigator.vibrate(strong ? [60,70,60,70,120] : 18); }catch(e){}
+  }
+}
+
+function randomStart(){
+  var o = order(); if (!o.length) return [];
+  var k = Math.min(S.fieldSize, o.length);
+  var r = Math.floor(Math.random() * o.length), out = [];
+  for (var i=0;i<k;i++) out.push(o[(r+i) % o.length]);
+  return out;
+}
+function setStarters(list){
+  S.field = list.slice(0, S.fieldSize);
+  S.starters = S.field.slice().sort(function(a,c){ return a-c; });
+  S.entry = {}; S.tick = 0; assign(S.field);
+  S.since = 0; sel = {field:null, bench:null, start:[]};
+  render(); save();
+}
+
+function suggest(){
+  var b = bench();
+  var k = Math.min(S.subSize, b.length, S.field.length);
+  if (!k) return {inL:[], outL:[]};
+  var inL, outL;
+  if (S.rotation === 'catchup'){
+    inL = b.slice().sort(function(a,c){ return total(a)-total(c) || a-c; }).slice(0,k);
+    outL = S.field.slice().sort(function(a,c){
+      return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0,k);
+  } else {
+    var o = order();
+    var last = S.field.reduce(function(a,c){
+      return (S.entry[c]||0) > (S.entry[a]||0) ? c : a; }, S.field[0]);
+    var p = o.indexOf(last); inL = [];
+    for (var i=1; i<=o.length && inL.length<k; i++){
+      var n = o[(p+i+o.length) % o.length];
+      if (b.indexOf(n) >= 0 && inL.indexOf(n) < 0) inL.push(n);
+    }
+    outL = S.field.slice().sort(function(a,c){
+      return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0,k);
+  }
+  return {inL:inL, outL:outL.slice(0, inL.length)};
+}
+
+function doSub(inL, outL){
+  if (!inL.length || !outL.length) return;
+  snapshot('undo subs');
+  S.field = S.field.filter(function(n){ return outL.indexOf(n) < 0; }).concat(inL);
+  assign(inL);
+  S.since = 0; sel = {field:null, bench:null, start:sel.start};
+  pending = { inL: [], outL: [], auto: true };
+  blink(); render(); save();
+}
+
+function fillField(){
+  var guard = 0;
+  while (S.field.length < S.fieldSize && bench().length && guard++ < 40){
+    var b = bench(), pick = null;
+    if (S.rotation === 'catchup') pick = b.slice().sort(function(a,c){ return total(a)-total(c) || a-c; })[0];
+    else {
+      var o = order();
+      var last = S.field.length ? S.field.reduce(function(a,c){
+        return (S.entry[c]||0) > (S.entry[a]||0) ? c : a; }, S.field[0]) : null;
+      var p = last ? o.indexOf(last) : -1;
+      for (var i=1;i<=o.length;i++){
+        var n = o[(p+i+o.length)%o.length];
+        if (b.indexOf(n) >= 0){ pick = n; break; }
+      }
+      if (pick == null) pick = b[0];
+    }
+    S.field.push(pick); assign([pick]);
+  }
+  while (S.field.length > S.fieldSize){
+    var drop = S.field.slice().sort(function(a,c){ return (S.entry[a]||0)-(S.entry[c]||0); })[0];
+    S.field = S.field.filter(function(x){ return x !== drop; });
+  }
+}
+
+/* ---------- recording ---------- */
+function countPlay(){
+  S.field.forEach(function(n){
+    if (!S.stats[n]) S.stats[n] = {off:0, def:0};
+    S.stats[n][S.mode === 'offense' ? 'off' : 'def']++;
+  });
+  S.play++;
+  if (S.trigger === 'plays') S.since++;
+}
+function flipSide(){
+  S.mode = S.mode === 'offense' ? 'defense' : 'offense';
+  S.down = 1;
+  if (S.trigger === 'possessions') S.since++;
+}
+var ask4 = false;  // 4th-down outcome prompt; UI-only, nothing recorded until a choice
+function runPlay(kind){
+  if (!S.live) return;
+  if (kind === 'play' && S.down >= 4){ ask4 = true; return render(); }
+  ask4 = false;
+  snapshot(kind === 'first' ? 'undo first down'
+         : kind === 'turn'  ? 'undo possession'
+         : kind === 'td'    ? 'undo touchdown' : 'undo that play');
+  countPlay();
+  if (kind === 'first') S.down = 1;
+  else if (kind === 'turn') flipSide();
+  else if (kind === 'td'){
+    if (S.mode === 'offense') S.us += 6; else S.them += 6;
+    S.pat = true;
+  }
+  else S.down = S.down >= 4 ? 1 : S.down + 1;
+  pending.auto = true;
+  var sg = suggest();
+  blink(S.since === S.interval && sg.inL.length > 0);
+  render(); save();
+}
+function pat(points){
+  snapshot('undo extra point');
+  countPlay();
+  if (points){ if (S.mode === 'offense') S.us += points; else S.them += points; }
+  S.pat = false;
+  flipSide();
+  pending.auto = true;
+  blink(); render(); save();
+}
+
+/* ---------- game lifecycle ---------- */
+function startGame(){
+  snapshot('undo start');
+  S.stats = {}; S.entry = {}; S.tick = 0;
+  S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false;
+  S.mode = 'offense'; S.started = new Date().toISOString(); S.live = true;
+  S.present.forEach(function(n){ S.stats[n] = {off:0, def:0}; });
+  undoStack = [];
+  pending = { inL: [], outL: [], auto: true };
+  syncFieldSize();
+  var picks = sel.start.filter(function(n){ return S.present.indexOf(n) >= 0; });
+  setStarters(picks.length === S.fieldSize ? picks.slice().sort(function(a,c){return a-c;}) : randomStart());
+}
+function endGame(){
+  if (S.play){
+    season.unshift({
+      id: Date.now(), date: S.started || new Date().toISOString(),
+      no: S.slot, team: S.team,
+      plays: S.play, us: S.us, them: S.them,
+      starters: S.starters.slice(),
+      stats: JSON.parse(JSON.stringify(S.stats)),
+      names: S.roster.reduce(function(o,p){ o[p.num] = p.name; return o; }, {})
+    });
+    season.sort(function(a,c){ return a.no - c.no; });
+    saveSeason();
+  }
+  S.slot = nextOpenSlot();
+  S.live = false; S.pat = false;
+  undoStack = [];
+  pending = { inL: [], outL: [], auto: true };
+  S.present = S.roster.map(function(p){ return p.num; });
+  sel = {start:[]};
+  syncFieldSize(); goStep(1);
+  save();
+}
+
+/* ---------- handoff ---------- */
+function pack(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+function encodeState(){
+  // try to carry the season history too, but keep the link textable
+  var full = pack({S:S, season:season});
+  if (full.length < 1700) return {code:full, withHistory:true};
+  return {code: pack({S:S}), withHistory:false};
+}
+function decodeState(code){
+  var json = decodeURIComponent(escape(atob(code)));
+  return JSON.parse(json);
+}
+function makeHandoff(){
+  var enc = encodeState();
+  var base = location.href.split('#')[0];
+  var link = base + '#g=' + enc.code;
+  var payload = link.length < 8000 ? link : enc.code;
+  $('handoffOut').classList.remove('hide');
+  $('handoffText').value = payload;
+  var what = 'Carries game ' + gameNumber() + ' \u2014 score ' + S.us + '\u2013' + S.them +
+    ', play ' + S.play + ', and everyone\u2019s counts.' +
+    (enc.withHistory ? '' : ' Too long to include past games, so just this one \u2014 that\u2019s all they need.');
+  try{
+    navigator.clipboard.writeText(payload);
+    $('handoffNote').textContent = 'Copied. ' + what;
+  }catch(e){
+    $('handoffNote').textContent = 'Copy the text above and send it. ' + what;
+  }
+  if ($('handoffText').select) $('handoffText').select();
+}
+function applyIncoming(raw, note){
+  var code = raw.trim();
+  var hash = code.indexOf('#g=');
+  if (hash >= 0) code = code.slice(hash + 3);
+  try{
+    var p = decodeState(code);
+    if (!p || !p.S || !p.S.roster) throw new Error('bad');
+    for (var k in p.S) S[k] = p.S[k];
+    if (p.season && p.season.length){
+      // union by game id so neither phone loses saved games
+      var seen = {};
+      season.forEach(function(g){ seen[g.id] = true; });
+      p.season.forEach(function(g){ if (!seen[g.id]) season.push(g); });
+      season.sort(function(a,c){ return new Date(c.date) - new Date(a.date); });
+    }
+    undoStack = []; sel = {start:[]};
+    pending = { inL: [], outL: [], auto: true };
+    save(); saveSeason(); render();
+    if (note) $(note).textContent = 'Loaded. You have the game — game ' + gameNumber() +
+      ', ' + S.us + '\u2013' + S.them + ', play ' + S.play + '.';
+    return true;
+  }catch(e){
+    if (note) $(note).textContent = 'That code didn\u2019t read. Copy the whole link and try again.';
+    return false;
+  }
+}
+function checkIncomingLink(){
+  var h = location.hash || '';
+  if (h.indexOf('#g=') !== 0) return;
+  var ok = applyIncoming(h);
+  if (ok) { try{ history.replaceState(null,'',location.href.split('#')[0]); }catch(e){} }
+}
+
+/* ---------- export ---------- */
+function csvText(){
+  var rows = [['game','date','team','score us','score them','total plays','number','name','offense','defense','total']];
+  season.forEach(function(g){
+    Object.keys(g.stats).forEach(function(n){
+      var s = g.stats[n], t = (s.off||0)+(s.def||0);
+      if (!t) return;
+      rows.push([g.no||'', g.date.slice(0,10), g.team||'', g.us||0, g.them||0,
+                 g.plays, n, (g.names||{})[n]||'', s.off||0, s.def||0, t]);
+    });
+  });
+  return rows.map(function(r){
+    return r.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(',');
+  }).join('\n');
+}
+function exportCsv(){
+  var text = csvText();
+  try{
+    var url = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+    var a = document.createElement('a'); a.href = url;
+    a.download = (S.team ? S.team.replace(/[^A-Za-z0-9]+/g,'-') : 'season') + '.csv';
+    a.click(); setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }catch(e){}
+  try{ navigator.clipboard.writeText(text); }catch(e){}
+  $('exportNote').textContent = 'Downloaded, and copied to your clipboard as a backup.';
+}
+function fmtDate(d){
+  return new Date(d).toLocaleDateString(undefined,{month:'short', day:'numeric'});
+}
+function seasonTotals(){
+  var t = {};
+  season.forEach(function(g){
+    Object.keys(g.stats).forEach(function(n){
+      var s = g.stats[n]; n = +n;
+      t[n] = t[n] || {off:0, def:0, games:0};
+      t[n].off += s.off||0; t[n].def += s.def||0;
+      if ((s.off||0)+(s.def||0)) t[n].games++;
+    });
+  });
+  return t;
+}
+
+var detailNo = null;
+function openDetail(n){
+  var g = gameByNo(n); if (!g) return;
+  detailNo = n;
+  $('detTitle').textContent = 'Game ' + n;
+  $('detDate').textContent = fmtDate(g.date);
+  $('detUs').textContent = g.us; $('detThem').textContent = g.them;
+  var result = g.us > g.them ? 'Win' : (g.us < g.them ? 'Loss' : 'Tie');
+  $('detMeta').textContent = result + ' \u00b7 ' + g.plays + ' plays \u00b7 started ' +
+    g.starters.join(', ') + (g.team ? ' \u00b7 ' + g.team : '');
+  var nums = Object.keys(g.stats).map(Number).filter(function(k){
+    var st = g.stats[k]; return (st.off||0)+(st.def||0) > 0; });
+  var mx = 1;
+  nums.forEach(function(k){ var st = g.stats[k]; mx = Math.max(mx, (st.off||0)+(st.def||0)); });
+  nums.sort(function(a,c){
+    var x = g.stats[a], y = g.stats[c];
+    return ((x.off||0)+(x.def||0)) - ((y.off||0)+(y.def||0)) || a-c; });
+  $('detTable').innerHTML = nums.length ? nums.map(function(k){
+    var st = g.stats[k], t = (st.off||0)+(st.def||0), nm = (g.names||{})[k] || '';
+    return '<div class="row"><p class="rn">' + k + '</p><div><div class="bar">' +
+      '<u class="bo" style="width:' + ((st.off||0)/mx*100) + '%"></u>' +
+      '<u class="bd" style="width:' + ((st.def||0)/mx*100) + '%"></u></div>' +
+      (nm ? '<div class="cap">' + esc(nm) + '</div>' : '') + '</div>' +
+      '<div class="rt"><b>' + t + '</b>' + (st.off||0) + 'o / ' + (st.def||0) + 'd</div></div>';
+  }).join('') : '<p class="hint">No play counts recorded.</p>';
+  $('scheduleCard').classList.add('hide');
+  $('detailCard').classList.remove('hide');
+  window.scrollTo(0,0);
+}
+function closeDetail(){
+  detailNo = null;
+  $('detailCard').classList.add('hide');
+  $('scheduleCard').classList.remove('hide');
+  render();
+}
+
+/* ---------- lock code ---------- */
+var unlocked = false, pinBuf = '', pinMode = null, pinThen = null, pinFirst = '';
+
+function pinDots(){
+  var d = '';
+  for (var i=0;i<4;i++) d += '<span class="' + (i < pinBuf.length ? 'on' : '') + '"></span>';
+  $('pinDots').innerHTML = d;
+}
+function openPin(mode, title, sub, then){
+  pinMode = mode; pinThen = then || null; pinBuf = ''; pinFirst = '';
+  $('pinTitle').textContent = title;
+  $('pinSub').textContent = sub || '';
+  $('pinSub').className = 'pinsub';
+  pinDots();
+  $('btnForgotPin').classList.toggle('hide', mode !== 'check');
+  $('btnForgotPin').disabled = false;
+  $('pinModal').classList.remove('hide');
+}
+function closePin(){
+  $('pinModal').classList.add('hide');
+  pinMode = null; pinThen = null; pinBuf = ''; pinFirst = '';
+  if (revealTimer){ clearTimeout(revealTimer); revealTimer = null; }
+}
+function pinFail(msg){
+  $('pinSub').textContent = msg;
+  $('pinSub').className = 'pinsub bad';
+  pinBuf = ''; pinDots();
+  if (navigator.vibrate){ try{ navigator.vibrate([40,60,40]); }catch(e){} }
+}
+function pinKey(k){
+  if (k === 'x') return closePin();
+  if (k === 'd'){ pinBuf = pinBuf.slice(0,-1); return pinDots(); }
+  if (pinBuf.length >= 4) return;
+  pinBuf += k; pinDots();
+  if (pinBuf.length < 4) return;
+
+  if (pinMode === 'check'){
+    if (pinBuf === S.pin){ unlocked = true; var f = pinThen; closePin(); if (f) f(); }
+    else pinFail('Wrong code. Try again.');
+  } else if (pinMode === 'set1'){
+    pinFirst = pinBuf; pinBuf = '';
+    $('pinTitle').textContent = 'Enter it again';
+    $('pinSub').textContent = 'Just to be sure.';
+    $('pinSub').className = 'pinsub';
+    pinMode = 'set2'; pinDots();
+  } else if (pinMode === 'set2'){
+    if (pinBuf === pinFirst){
+      S.pin = pinBuf; unlocked = true; save(); closePin(); render();
+    } else {
+      pinMode = 'set1'; pinFirst = '';
+      $('pinTitle').textContent = 'Set a code';
+      pinFail('Those didn\u2019t match. Start over.');
+    }
+  }
+}
+// run fn now if unlocked or no code set, otherwise ask first
+function guard(label, fn){
+  if (!S.pin || unlocked) return fn();
+  openPin('check', 'Enter your code', label, fn);
+}
+
+/* ---------- render ---------- */
+function chipHtml(n, where){
+  var cls = short(n) ? 'short' : '';
+  if (where === 'field' && pending.outL.indexOf(n) >= 0) cls = 'swout';
+  else if (where === 'bench' && pending.inL.indexOf(n) >= 0) cls = 'swin';
+  var label = total(n);
+  if (where === 'field' && pending.outL.indexOf(n) >= 0) label = 'OUT';
+  else if (where === 'bench' && pending.inL.indexOf(n) >= 0) label = 'IN';
+  return '<button class="chip ' + cls +
+    '" data-n="' + n + '" data-w="' + where + '"><b>' + n + '</b><i>' + label + '</i></button>';
+}
+
+function render(){
+  var b = bench(), sList = shortList();
+
+  $('teamName').textContent = S.team || 'Tap Setup to name your team';
+  $('gameNo').textContent = 'Game ' + S.slot + ' of ' + S.weeks +
+    (S.live ? '' : ' \u00b7 not started');
+  $('btnEnd').classList.toggle('hide', !S.live);
+  $('preGame').classList.toggle('hide', S.live);
+  $('liveGame').classList.toggle('hide', !S.live);
+  $('dock').classList.toggle('hide', !S.live || currentTab !== 'tGame');
+  $('btnStart').textContent = 'Start game ' + gameNumber();
+
+  /* ---- pre-game wizard ---- */
+  if (!S.live){
+    syncFieldSize();
+    $('stepDots').innerHTML = [1,2,3].map(function(i){
+      return '<span class="' + (i <= wizStep ? 'on' : '') + '"></span>'; }).join('');
+
+    $('wizAtt').innerHTML = S.roster.map(function(p){
+      var here = S.present.indexOf(p.num) >= 0;
+      return '<button class="chip" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
+        ';border-color:' + (here?'var(--ok)':'var(--line)') + '"><b>' + p.num + '</b><i>' +
+        (here?'here':'out') + '</i></button>';
+    }).join('');
+    $('wizHere').textContent = S.present.length + ' of ' + S.roster.length + ' here';
+    $('btnStep1').disabled = S.present.length < 2;
+    $('btnStep1').textContent = S.present.length < 2
+      ? 'Check in at least 2 kids' : 'Next: pick who starts (' + S.present.length + ' here)';
+
+    $('wizStart').innerHTML = order().map(function(n){
+      var on = sel.start.indexOf(n) >= 0;
+      return '<button class="chip ' + (on?'pick':'') + '" data-st="' + n + '"><b>' + n +
+        '</b><i>' + (on?'starts':'&nbsp;') + '</i></button>';
+    }).join('');
+    $('wizStartMeta').textContent = sel.start.length + ' of ' + S.fieldSize + ' picked';
+    $('btnStep2').disabled = sel.start.length !== S.fieldSize;
+    $('btnStep2').textContent = sel.start.length === S.fieldSize
+      ? 'Next: ' + sel.start.slice().sort(function(a,c){return a-c;}).join(', ') + ' start'
+      : 'Tap ' + (S.fieldSize - sel.start.length) + ' more';
+
+    $('wSubSize').textContent = S.subSize;
+    $('wInterval').textContent = S.interval;
+    $('wTrigLabel').firstChild.nodeValue = S.trigger === 'plays' ? 'Swap every … plays' : 'Swap every … possessions';
+    $('wTrigSub').textContent = S.trigger === 'plays' ? 'Counts every snap you log'
+      : 'Change of possession is the natural break';
+    $('btnTrigPlay2').classList.toggle('on', S.trigger === 'plays');
+    $('btnTrigPoss2').classList.toggle('on', S.trigger === 'possessions');
+    var benchSize = S.present.length - S.fieldSize;
+    var uWord = S.trigger === 'plays' ? 'plays' : 'possessions';
+    if (benchSize <= 0){
+      $('wizSummary').innerHTML = '<span style="color:var(--warn)">Only ' + S.present.length +
+        ' here, so everybody plays every down. Nothing to rotate today \u2014 just start.</span>';
+    } else {
+      var cycle = Math.ceil(S.present.length / Math.max(1,S.subSize)) * S.interval;
+      $('wizSummary').textContent = S.present.length + ' kids, ' + S.fieldSize +
+        ' on the field, ' + S.subSize + ' swapped every ' + S.interval + ' ' + uWord +
+        ' \u2014 everyone gets a turn about every ' + cycle + ' ' + uWord + '.';
+    }
+    $('step3').querySelectorAll('.set').forEach(function(el){
+      el.style.display = benchSize <= 0 ? 'none' : '';
+    });
+  }
+
+  $('usScore').textContent = S.us;
+  $('themScore').textContent = S.them;
+
+  $('status').className = 'status ' + S.mode;
+  $('sideLabel').textContent = S.mode === 'offense' ? 'OFFENSE' : 'DEFENSE';
+  $('downNum').textContent = ORD[S.down-1];
+  var left = S.interval - S.since;
+  var unit = S.trigger === 'plays' ? 'play' : 'possession';
+  $('sideSub').textContent = S.pat ? 'extra point' : 'play ' + S.play;
+
+  var waiting = sList.filter(function(n){ return S.field.indexOf(n) < 0; });
+  $('alertBox').innerHTML = sList.length
+    ? '<div class="alert"><div style="flex:1"><b>' + sList.join(', ') + '</b> ' +
+      (sList.length===1?'has':'have') + ' played ' + (sList.length===1?'':'up to ') + behindBy(sList[0]) +
+      ' fewer plays than the leader.' +
+      (waiting.length
+        ? '<button class="big fill" id="btnCatch" style="margin-top:10px">Put ' +
+          waiting.slice(0,6).join(', ') + ' in now</button>'
+        : '<div class="cap" style="color:var(--warn)">' + (sList.length===1?'They\u2019re':'All are') +
+          ' on the field now \u2014 no action needed. They\u2019ll stay in at the next swap until they catch up.</div>') +
+      '</div></div>'
+    : '';
+
+  var sg = suggest(), due = left <= 0;
+  if (pending.auto){
+    pending.inL = sg.inL.slice();
+    pending.outL = sg.outL.slice();
+  }
+  // Clean out stale picks (player left, checked out, etc.)
+  pending.inL = pending.inL.filter(function(n){ return b.indexOf(n) >= 0; });
+  pending.outL = pending.outL.filter(function(n){ return S.field.indexOf(n) >= 0; });
+
+  var canSwap = pending.inL.length > 0 || sg.inL.length > 0;
+  var k = Math.min(pending.inL.length, pending.outL.length);
+  $('nextCard').className = 'card next' + (due && canSwap ? ' due' : '');
+  $('cSince').textContent = S.since;
+  $('cOf').textContent = 'of ' + S.interval;
+  if (!canSwap){
+    $('cTitle').textContent = 'Everyone is playing';
+    $('cSub').textContent = 'No bench today \u2014 nothing to rotate.';
+  } else if (due){
+    $('cTitle').textContent = 'SWAP NOW';
+    $('cSub').textContent = S.since > S.interval
+      ? (S.since - S.interval) + ' ' + (S.trigger==='plays'?'play':'possession') +
+        (S.since - S.interval === 1 ? '' : 's') + ' past due'
+      : 'Send in ' + pending.inL.join(', ') + '.';
+  } else {
+    $('cTitle').textContent = unit === 'play' ? 'Plays this rotation' : 'Possessions this rotation';
+    $('cSub').textContent = left + ' more, then swap ' + pending.inL.join(', ') + ' in.';
+  }
+  var dash = '<b style="border:0;background:none;color:var(--muted)">&mdash;</b>';
+  $('inNums').innerHTML  = pending.inL.length  ? pending.inL.map(function(n){return '<b data-pi="'+n+'">'+n+'</b>';}).join('')  : dash;
+  $('outNums').innerHTML = pending.outL.length ? pending.outL.map(function(n){return '<b data-po="'+n+'">'+n+'</b>';}).join('') : dash;
+  var balanced = pending.inL.length > 0 && pending.inL.length === pending.outL.length;
+  $('btnSub').disabled = !balanced;
+  $('btnSub').textContent = !canSwap ? 'Nobody available to swap'
+    : !balanced && pending.inL.length > pending.outL.length
+      ? 'Tap ' + (pending.inL.length - pending.outL.length) + ' on field to send out'
+    : !balanced && pending.outL.length > pending.inL.length
+      ? 'Tap ' + (pending.outL.length - pending.inL.length) + ' on bench to bring in'
+    : balanced ? 'Make these subs' : 'Tap players to swap';
+  var resetLink = !pending.auto && sg.inL.length
+    ? '<button class="cap" id="btnResetPending" style="color:var(--link);border:0;background:0;padding:14px 0;cursor:pointer;font:600 15px Barlow,sans-serif">Undo my changes</button>' : '';
+  $('subExtra').innerHTML = resetLink;
+
+  $('fieldChips').innerHTML = S.field.slice().sort(function(a,c){return a-c;})
+    .map(function(n){ return chipHtml(n,'field'); }).join('') || '<p class="hint">Nobody on the field.</p>';
+  $('benchChips').innerHTML = b.slice().sort(function(a,c){return a-c;})
+    .map(function(n){ return chipHtml(n,'bench'); }).join('') || '<p class="hint">Bench is empty.</p>';
+  $('fieldMeta').textContent = S.field.length + ' of ' + S.fieldSize;
+  $('benchMeta').textContent = b.length + ' waiting';
+
+  /* dock */
+  $('btnSnap').dataset.m = S.mode;
+  $('btnSnap').classList.toggle('duering', due && canSwap);
+  if (S.pat || S.down < 4) ask4 = false;
+  $('btnSnap').innerHTML = ask4
+    ? '4TH DOWN<small>what happened? pick below</small>'
+    : 'PLAY RAN<small>' + ORD[S.down-1] + ' down \u00b7 tap after every snap</small>';
+  $('btnSnap').disabled = S.pat || ask4;
+  $('normalRow').classList.toggle('hide', S.pat || ask4);
+  $('patRow').classList.toggle('hide', !S.pat);
+  $('fourthRow').classList.toggle('hide', !ask4);
+  $('turnSub').innerHTML = '&rarr; ' + (S.mode === 'offense' ? 'defense' : 'offense');
+  $('turn4Sub').innerHTML = $('turnSub').innerHTML;
+  $('btnUndo').disabled = !undoStack.length;
+  $('undoSub').textContent = undoStack.length ? (lastAction || 'take back last tap') : 'nothing yet';
+
+  /* team tab */
+  var max = Math.max.apply(null, [1].concat(S.present.map(total)));
+  $('timeTable').innerHTML = S.roster.slice().sort(function(a,c){
+      return total(a.num)-total(c.num) || a.num-c.num; }).map(function(p){
+    var st = S.stats[p.num] || {off:0,def:0}, t = st.off+st.def;
+    var here = S.present.indexOf(p.num) >= 0, bb = behindBy(p.num);
+    var status = !here ? 'not here today'
+      : (S.play === 0 ? 'no plays yet' : (bb === 0 ? 'most plays on the team' : bb + ' behind the leader'));
+    return '<div class="row ' + (here?'':'out') + '"><p class="rn">' + p.num + '</p>' +
+      '<div><div class="bar"><u class="bo" style="width:' + (st.off/max*100) + '%"></u>' +
+      '<u class="bd" style="width:' + (st.def/max*100) + '%"></u></div>' +
+      '<div class="cap">' + (p.name ? esc(p.name) + ' \u00b7 ' : '') + status + '</div></div>' +
+      '<div class="rt"><b class="' + (here && short(p.num) ? 'short':'') + '">' + t + '</b>' +
+      st.off + 'o / ' + st.def + 'd</div></div>';
+  }).join('');
+
+  $('attChips').innerHTML = S.roster.map(function(p){
+    var here = S.present.indexOf(p.num) >= 0;
+    return '<button class="chip" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
+      ';border-color:' + (here?'var(--ok)':'var(--line)') + '"><b>' + p.num + '</b><i>' +
+      (here?'here':'out') + '</i></button>';
+  }).join('');
+  $('hereMeta').textContent = S.present.length + ' of ' + S.roster.length;
+
+  $('names').innerHTML = S.roster.map(function(p){
+    return '<div class="set"><p class="rn" style="width:44px">' + p.num + '</p>' +
+      '<input type="text" data-name="' + p.num + '" value="' +
+      esc(p.name||'') + '" placeholder="Name"></div>';
+  }).join('');
+
+  /* setup tab */
+  if (document.activeElement !== $('teamInput')) $('teamInput').value = S.team || '';
+
+  $('vSubSize').textContent = S.subSize;
+  $('vInterval').textContent = S.interval;
+  $('vGap').textContent = S.gapLimit;
+  $('gapSub').textContent = gapLimit() > S.gapLimit
+    ? 'Rotation alone puts kids ' + (naturalGap()-2) + ' behind, so this flags at ' + gapLimit()
+    : 'Compared to whoever has played most';
+  $('trigLabel').firstChild.nodeValue = S.trigger === 'plays' ? 'Swap every … plays' : 'Swap every … possessions';
+  $('trigSub').textContent = S.trigger === 'plays' ? 'Counts every snap you log'
+    : 'Change of possession is the natural break';
+  $('rotSub').textContent = S.rotation === 'sequence' ? 'Next numbers up, wrapping around'
+    : 'Fewest plays goes in first';
+  $('pinState').textContent = S.pin ? (unlocked ? 'on · unlocked' : 'on · locked') : 'off';
+  $('btnSetPin').textContent = S.pin ? 'Change the code' : 'Set a code';
+  $('btnClearPin').classList.toggle('hide', !S.pin);
+  $('btnLockNow').classList.toggle('hide', !S.pin || !unlocked);
+  $('btnTrigPlay').classList.toggle('on', S.trigger === 'plays');
+  $('btnTrigPoss').classList.toggle('on', S.trigger === 'possessions');
+  $('btnRotSeq').classList.toggle('on', S.rotation === 'sequence');
+  $('btnRotCatch').classList.toggle('on', S.rotation === 'catchup');
+
+  /* season tab */
+  var tot = seasonTotals();
+  var gvals = Object.keys(tot).map(function(k){ return tot[k].off + tot[k].def; });
+  var gmax = Math.max.apply(null, [1].concat(gvals));
+  $('seasonCount').textContent = season.length + ' game' + (season.length===1?'':'s');
+  $('seasonTable').innerHTML = season.length
+    ? S.roster.slice().sort(function(a,c){
+        var x = tot[a.num]||{off:0,def:0}, y = tot[c.num]||{off:0,def:0};
+        return (x.off+x.def)-(y.off+y.def) || a.num-c.num;
+      }).map(function(p){
+        var v = tot[p.num]||{off:0,def:0,games:0}, t = v.off+v.def;
+        return '<div class="row"><p class="rn">' + p.num + '</p><div><div class="bar">' +
+          '<u class="bo" style="width:' + (v.off/gmax*100) + '%"></u>' +
+          '<u class="bd" style="width:' + (v.def/gmax*100) + '%"></u></div>' +
+          '<div class="cap">' + (p.name ? esc(p.name) + ' \u00b7 ' : '') + v.games +
+          ' game' + (v.games===1?'':'s') + '</div></div>' +
+          '<div class="rt"><b>' + t + '</b>' + v.off + 'o / ' + v.def + 'd</div></div>';
+      }).join('')
+    : '<p class="hint">No games saved yet.</p>';
+
+  $('vWeeks').textContent = S.weeks;
+  var played = season.filter(function(g){ return g.no <= S.weeks; }).length;
+  $('schedMeta').textContent = played + ' of ' + S.weeks + ' played';
+  var rows = [];
+  for (var wn=1; wn<=S.weeks; wn++){
+    var g = gameByNo(wn), st = slotState(wn), right, sub, col;
+    if (st === 'final'){
+      col = g.us > g.them ? 'ok' : (g.us < g.them ? 'warn' : 'muted');
+      right = '<b style="color:var(--' + col + ')">' + g.us + '\u2013' + g.them + '</b>final';
+      sub = fmtDate(g.date) + ' \u00b7 ' + g.plays + ' plays';
+    } else if (st === 'live'){
+      right = '<b style="color:var(--off)">' + S.us + '\u2013' + S.them + '</b>live';
+      sub = 'in progress \u00b7 play ' + S.play;
+    } else {
+      right = '<b style="color:var(--muted)">\u2013</b>open';
+      sub = 'not started';
+    }
+    rows.push('<button data-slot="' + wn + '" style="display:grid;width:100%;text-align:left;' +
+      'grid-template-columns:1fr 86px;gap:12px;align-items:center;padding:13px 0;' +
+      'background:none;border:0;border-bottom:1px solid var(--line);color:var(--text);cursor:pointer">' +
+      '<div><p style="margin:0;font-weight:600;font-size:17px">Game ' + wn + '</p>' +
+      '<div class="cap">' + sub + '</div></div>' +
+      '<div class="rt">' + right + '</div></button>');
+  }
+  $('gameList').innerHTML = rows.join('');
+}
+
+/* ---------- events ---------- */
+var currentTab = 'tGame';
+function switchTab(id){
+  var map = {tGame:'vGame', tTeam:'vTeam', tSetup:'vSetup', tSeason:'vSeason'};
+  currentTab = id;
+  Object.keys(map).forEach(function(bId){
+    $(bId).classList.toggle('on', bId === id);
+    $(map[bId]).classList.toggle('hide', bId !== id);
+  });
+  if (id !== 'tSeason'){
+    $('detailCard').classList.add('hide');
+    $('scheduleCard').classList.remove('hide');
+  }
+  document.body.style.paddingBottom = (id === 'tGame' && S.live) ? '250px' : '30px';
+  window.scrollTo(0,0);
+  render();
+}
+var wizStep = 1;
+function goStep(n){
+  wizStep = n;
+  ['step1','step2','step3'].forEach(function(id,i){
+    $(id).classList.toggle('hide', i+1 !== n);
+  });
+  window.scrollTo(0,0);
+  render();
+}
+
+document.addEventListener('click', function(e){
+  var t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.k) return pinKey(t.dataset.k);
+
+  if (t.dataset.pi){
+    pending.auto = false;
+    var idx = pending.inL.indexOf(+t.dataset.pi);
+    if (idx >= 0) pending.inL.splice(idx, 1);
+    return render();
+  }
+  if (t.dataset.po){
+    pending.auto = false;
+    var idx = pending.outL.indexOf(+t.dataset.po);
+    if (idx >= 0) pending.outL.splice(idx, 1);
+    return render();
+  }
+  if (t.dataset.n){
+    var w = t.dataset.w, n = +t.dataset.n;
+    pending.auto = false;
+    if (w === 'field'){
+      var idx = pending.outL.indexOf(n);
+      if (idx >= 0) pending.outL.splice(idx, 1);
+      else pending.outL.push(n);
+    } else {
+      var idx = pending.inL.indexOf(n);
+      if (idx >= 0) pending.inL.splice(idx, 1);
+      else pending.inL.push(n);
+    }
+    return render();
+  }
+  if (t.dataset.att){
+    var an = +t.dataset.att; snapshot('undo check-in');
+    if (S.present.indexOf(an) >= 0){
+      S.present = S.present.filter(function(x){ return x !== an; });
+      var was = S.field.indexOf(an) >= 0;
+      S.field = S.field.filter(function(x){ return x !== an; });
+      if (was) fillField();
+    } else {
+      S.present.push(an);
+      if (!S.stats[an]) S.stats[an] = {off:0, def:0};
+      if (S.field.length < S.fieldSize) fillField();
+    }
+    pending.auto = true;
+    if (!S.live){
+      syncFieldSize();
+      sel.start = sel.start.filter(function(x){ return S.present.indexOf(x) >= 0; })
+                           .slice(0, S.fieldSize);
+    }
+    render(); save(); return;
+  }
+  if (t.dataset.st){
+    var sn = +t.dataset.st;
+    if (sel.start.indexOf(sn) >= 0) sel.start = sel.start.filter(function(x){ return x !== sn; });
+    else if (sel.start.length < S.fieldSize) sel.start.push(sn);
+    else { sel.start.shift(); sel.start.push(sn); }
+    return render();
+  }
+  if (t.dataset.slot){
+    var wn = +t.dataset.slot, st = slotState(wn);
+    if (st === 'final'){ openDetail(wn); return; }
+    if (st === 'live'){ return switchTab('tGame'); }
+    if (S.live){
+      $('schedMeta').textContent = 'Finish game ' + S.slot + ' first';
+      return;
+    }
+    S.slot = wn; sel.start = []; goStep(1); save();
+    return switchTab('tGame');
+  }
+  if (t.dataset.del){
+    season = season.filter(function(g){ return g.id !== +t.dataset.del; });
+    saveSeason(); return render();
+  }
+  if (t.dataset.sc){
+    snapshot('undo score change');
+    S[t.dataset.sc] = Math.max(0, S[t.dataset.sc] + (+t.dataset.d));
+    render(); save(); return;
+  }
+  if (t.dataset.s){
+    snapshot('undo setting');
+    var lim = LIM[t.dataset.s];
+    S[t.dataset.s] = Math.max(lim[0], Math.min(lim[1], S[t.dataset.s] + (+t.dataset.d)));
+    if (S.subSize > S.fieldSize) S.subSize = S.fieldSize;
+    render(); save(); return;
+  }
+
+  switch(t.id){
+    case 'btnSnap':  return runPlay('play');
+    case 'btn4First': return runPlay('first');
+    case 'btn4TD':    return runPlay('td');
+    case 'btn4Turn':  return runPlay('turn');
+    case 'btn4Back':  ask4 = false; return render();
+    case 'btnFirst': return runPlay('first');
+    case 'btnTurn':  return runPlay('turn');
+    case 'btnTD':    return runPlay('td');
+    case 'btnPat1':  return pat(1);
+    case 'btnPat2':  return pat(2);
+    case 'btnPat0':  return pat(0);
+    case 'btnUndo':  return undo();
+    case 'btnStep1': if (!sel.start.length) sel.start = randomStart(); return goStep(2);
+    case 'btnStep2': return goStep(3);
+    case 'btnBack1': return goStep(1);
+    case 'btnBack2': return goStep(2);
+    case 'btnWizRandom': sel.start = randomStart(); return render();
+    case 'btnTrigPlay2':  snapshot(); S.trigger = 'plays';       render(); save(); return;
+    case 'btnTrigPoss2':  snapshot(); S.trigger = 'possessions'; render(); save(); return;
+    case 'btnStart': return guard('to start game ' + S.slot, startGame);
+    case 'btnEnd':   return guard('to end game ' + S.slot, endGame);
+    case 'btnSub': {
+      var k = Math.min(pending.inL.length, pending.outL.length);
+      if (!k) return;
+      return doSub(pending.inL.slice(0, k), pending.outL.slice(0, k));
+    }
+    case 'btnResetPending': pending.auto = true; return render();
+    case 'btnCatch': {
+      var need = shortList().filter(function(n){ return S.field.indexOf(n) < 0; });
+      if (!need.length) return;
+      snapshot('undo that push');
+      var goIn = need.slice(0, Math.min(need.length, S.field.length));
+      var goOut = S.field.slice().sort(function(a,c){
+        return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0, goIn.length);
+      S.field = S.field.filter(function(n){ return goOut.indexOf(n) < 0; }).concat(goIn);
+      assign(goIn); S.since = 0; S.rotation = 'catchup';
+      pending = { inL: [], outL: [], auto: true };
+      blink(); render(); save(); return;
+    }
+    case 'btnResetCounter': snapshot('undo reset'); S.since = 0; pending.auto = true; render(); save(); return;
+    case 'btnTrigPlay':  snapshot(); S.trigger = 'plays';       render(); save(); return;
+    case 'btnTrigPoss':  snapshot(); S.trigger = 'possessions'; render(); save(); return;
+    case 'btnRotSeq':    snapshot(); S.rotation = 'sequence';   render(); save(); return;
+    case 'btnRotCatch':  snapshot(); S.rotation = 'catchup';    render(); save(); return;
+    case 'btnExport':    return exportCsv();
+    case 'btnHandoff':   return makeHandoff();
+    case 'btnSetPin':    return openPin('set1', S.pin ? 'Change your code' : 'Set a code', 'Four digits.');
+    case 'btnClearPin':  return guard('to turn the code off', function(){
+      S.pin = ''; unlocked = false; save(); render();
+    });
+    case 'btnLockNow':   unlocked = false; render(); return;
+    case 'btnTakeover':  $('takeoverBox').classList.toggle('hide'); return;
+    case 'btnTakeoverGo': return guard('to load someone else\u2019s game', function(){
+      applyIncoming($('takeoverText').value, 'takeoverNote');
+    });
+    case 'btnBackupExport': return exportBackup();
+    case 'btnBackupImport': $('backupFile').click(); return;
+    case 'btnResetReveal': return guard('to reset everything', function(){
+      $('resetBox').classList.remove('hide'); $('btnResetReveal').classList.add('hide');
+    });
+    case 'btnResetGo': return resetEverything();
+    case 'btnForgotPin': return revealPin();
+    case 'btnAddPlayer': {
+      var mx = Math.max.apply(null, [0].concat(S.roster.map(function(p){ return p.num; })));
+      S.roster.push({num:mx+1, name:''}); S.stats[mx+1] = {off:0, def:0};
+      render(); save(); return;
+    }
+    case 'btnDetBack': return closeDetail();
+    case 'btnDetDelete': return guard('to delete game ' + detailNo, function(){
+      season = season.filter(function(g){ return g.no !== detailNo; });
+      saveSeason(); S.slot = nextOpenSlot(); save();
+      closeDetail();
+    });
+    case 'tGame': case 'tTeam': case 'tSetup': case 'tSeason':
+      return switchTab(t.id);
+  }
+});
+
+document.addEventListener('input', function(e){
+  if (e.target.dataset.name){
+    var p = null;
+    S.roster.forEach(function(x){ if (x.num === +e.target.dataset.name) p = x; });
+    if (p){ p.name = e.target.value; save(); }
+  }
+  if (e.target.id === 'teamInput'){ S.team = e.target.value; $('teamName').textContent = S.team || 'Tap Setup to name your team'; save(); }
+  if (e.target.id === 'resetConfirm'){
+    $('btnResetGo').disabled = e.target.value !== 'RESET';
+  }
+});
+
+/* ---------- backup & restore ---------- */
+function exportBackup(){
+  var data = {
+    version: 1,
+    exported: new Date().toISOString(),
+    state: JSON.parse(JSON.stringify(S)),
+    season: JSON.parse(JSON.stringify(season))
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url;
+  var d = new Date().toISOString().slice(0,10);
+  a.download = 'sideline-backup-' + d + '.json';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  $('backupNote').textContent = 'Backup downloaded.';
+  $('backupNote').className = 'hint ok';
+}
+
+$('backupFile').addEventListener('change', function(e){
+  var file = e.target.files[0]; if (!file) return;
+  if (!confirm('This will replace your current roster, settings, and all saved games with the backup. Continue?')){
+    e.target.value = ''; return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(){
+    try{
+      var data = JSON.parse(reader.result);
+      if (!data.state || !data.state.roster) throw new Error('bad shape');
+      for (var k in data.state) S[k] = data.state[k];
+      if (data.season && Array.isArray(data.season)) season = data.season;
+      save(); saveSeason();
+      undoStack = []; sel = {start:[]};
+      pending = { inL: [], outL: [], auto: true };
+      unlocked = false;
+      render();
+      $('backupNote').textContent = 'Restored from backup (' + (data.exported || 'unknown date') + ').';
+      $('backupNote').className = 'hint ok';
+    }catch(err){
+      $('backupNote').textContent = 'That file didn\u2019t look right. Pick a sideline-backup .json file.';
+      $('backupNote').className = 'hint';
+      $('backupNote').style.color = 'var(--warn)';
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* ---------- reset everything ---------- */
+function resetEverything(){
+  if ($('resetConfirm').value !== 'RESET') return;
+  try{ localStorage.removeItem('fb:state'); localStorage.removeItem('fb:season'); }catch(e){}
+  S = {
+    team:'', roster:[], present:[], field:[], stats:{}, entry:{}, tick:0,
+    starters:[], started:null, live:false,
+    fieldSize:6, subSize:3, interval:3, trigger:'plays', rotation:'sequence', gapLimit:6,
+    mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
+    weeks:8, slot:1, pin:''
+  };
+  season = []; undoStack = []; sel = {start:[]};
+  pending = { inL: [], outL: [], auto: true };
+  for (var i=1;i<=12;i++) S.roster.push({num:i, name:''});
+  S.present = S.roster.map(function(p){ return p.num; });
+  S.present.forEach(function(n){ S.stats[n] = {off:0, def:0}; });
+  S.field = randomStart();
+  save(); saveSeason();
+  $('resetConfirm').value = '';
+  $('resetBox').classList.add('hide');
+  $('btnResetReveal').classList.remove('hide');
+  switchTab('tGame'); goStep(1);
+  render();
+}
+
+/* ---------- PIN escape hatch ---------- */
+var revealTimer = null;
+function revealPin(){
+  if (!S.pin) return;
+  if (revealTimer) clearTimeout(revealTimer);
+  $('pinSub').textContent = 'Your code is: ' + S.pin;
+  $('pinSub').className = 'pinsub ok';
+  $('btnForgotPin').disabled = true;
+  revealTimer = setTimeout(function(){
+    revealTimer = null;
+    if (document.getElementById('pinModal').classList.contains('hide')) return;
+    $('pinSub').textContent = '';
+    $('pinSub').className = 'pinsub';
+    $('btnForgotPin').disabled = false;
+  }, 5000);
+}
+
+/* ---------- service worker ---------- */
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+
+load();
+</script>
+</body>
+</html>
