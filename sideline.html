@@ -57,9 +57,9 @@
   .strip{display:flex; align-items:center; gap:12px;}
   .scoreline{display:flex; gap:10px; margin-top:10px; padding-top:10px;
              border-top:1px solid rgba(255,255,255,.12);}
-  .sl{display:flex; align-items:center; gap:6px; flex:1; justify-content:center;}
+  .sl{display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; flex:1; min-width:0; justify-content:center;}
   .sl u{text-decoration:none; font:600 12px 'Barlow',sans-serif; color:var(--muted);
-        letter-spacing:.05em; margin-right:2px;}
+        letter-spacing:.05em; flex-basis:100%; text-align:center;}
   .sl b{font:700 30px 'Barlow Condensed',sans-serif; min-width:34px; text-align:center;
         line-height:1; font-variant-numeric:tabular-nums;}
   .sl button{width:44px; height:44px; border-radius:11px; border:1px solid var(--line);
@@ -1013,6 +1013,13 @@ function chipHtml(n, where){
     '" data-n="' + n + '" data-w="' + where + '"><b>' + n + '</b><i>' + label + '</i></button>';
 }
 
+// Keep page content scrollable clear of the fixed dock, whatever its real height
+// (safe-area inset, PAT/4th-down rows, iOS text size).
+function padForDock(){
+  var d = $('dock');
+  document.body.style.paddingBottom = d.classList.contains('hide') ? '40px' : (d.offsetHeight + 16) + 'px';
+}
+window.addEventListener('resize', padForDock);
 function render(){
   var b = bench(), sList = shortList();
 
@@ -1277,7 +1284,6 @@ function switchTab(id){
     $('detailCard').classList.add('hide');
     $('scheduleCard').classList.remove('hide');
   }
-  document.body.style.paddingBottom = (id === 'tGame' && S.live) ? '250px' : '30px';
   window.scrollTo(0,0);
   render();
 }
@@ -1561,6 +1567,9 @@ function revealPin(){
 if ('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').catch(function(){});
 }
+
+var renderCore = render;
+render = function(){ var r = renderCore.apply(this, arguments); padForDock(); return r; };
 
 load();
 </script>

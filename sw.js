@@ -1,4 +1,4 @@
-var CACHE = 'sideline-v2';
+var CACHE = 'sideline-v3';
 var PRECACHE = [
   'sideline.html',
   'manifest.json',
