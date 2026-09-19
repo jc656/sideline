@@ -306,24 +306,6 @@
     </div>
 
     <div id="liveGame">
-      <div class="status offense" id="status">
-        <div class="strip">
-          <div class="side" id="sideLabel">OFFENSE</div>
-          <div class="sub" id="sideSub"></div>
-          <div class="dn"><b id="downNum">1st</b><span>down</span></div>
-        </div>
-        <div class="scoreline">
-          <span class="sl"><u>US</u>
-            <button data-sc="us" data-d="-1">&minus;</button>
-            <b id="usScore">0</b>
-            <button data-sc="us" data-d="1">+</button></span>
-          <span class="sl"><u>THEM</u>
-            <button data-sc="them" data-d="-1">&minus;</button>
-            <b id="themScore">0</b>
-            <button data-sc="them" data-d="1">+</button></span>
-        </div>
-      </div>
-
       <div class="card next" id="nextCard">
         <div class="counter">
           <div class="cnum"><b id="cSince">0</b><span id="cOf">of 3</span></div>
@@ -336,6 +318,14 @@
         <div id="subExtra"></div>
       </div>
 
+      <div class="status offense" id="status">
+        <div class="strip">
+          <div class="side" id="sideLabel">OFFENSE</div>
+          <div class="sub" id="sideSub"></div>
+          <div class="dn"><b id="downNum">1st</b><span>down</span></div>
+        </div>
+      </div>
+
       <div id="alertBox"></div>
 
       <div class="card">
@@ -344,6 +334,20 @@
         <h2 style="margin:18px 0 12px">Bench <em id="benchMeta"></em></h2>
         <div class="chips bench" id="benchChips"></div>
         <p class="hint">Tap players to change the swap. Match the same number in and out.</p>
+      </div>
+
+      <div class="card">
+        <h2>Score</h2>
+        <div class="scoreline" style="margin-top:0; padding-top:0; border-top:0">
+          <span class="sl"><u>US</u>
+            <button data-sc="us" data-d="-1">&minus;</button>
+            <b id="usScore">0</b>
+            <button data-sc="us" data-d="1">+</button></span>
+          <span class="sl"><u>THEM</u>
+            <button data-sc="them" data-d="-1">&minus;</button>
+            <b id="themScore">0</b>
+            <button data-sc="them" data-d="1">+</button></span>
+        </div>
       </div>
     </div>
   </div>
