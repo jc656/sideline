@@ -23,21 +23,21 @@
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0; background:var(--bg); color:var(--text);}
   body{font-family:'Barlow',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-       font-size:17px; line-height:1.35; padding-bottom:250px;
+       font-size:16px; line-height:1.3; padding-bottom:250px;
        -webkit-user-select:none; user-select:none;}
   .wrap{max-width:600px; margin:0 auto; padding:0 14px;}
 
-  .tabs{display:flex; border-bottom:1px solid var(--line); margin:0 -14px 14px;
+  .tabs{display:flex; border-bottom:1px solid var(--line); margin:0 -14px 10px;
         padding:env(safe-area-inset-top) 14px 0; position:sticky; top:0; background:var(--bg); z-index:20;}
   .tabs button{flex:1; background:none; border:0; border-bottom:3px solid transparent;
-               color:var(--muted); font:600 15px 'Barlow',sans-serif; padding:15px 0 12px; cursor:pointer;}
+               color:var(--muted); font:600 15px 'Barlow',sans-serif; padding:11px 0 9px; cursor:pointer;}
   .tabs button.on{color:var(--text); border-bottom-color:var(--text);}
 
   /* header */
-  .gid{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+  .gid{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
   .gid div{flex:1; min-width:0;}
   .gid .team{font-size:15px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .gid .gno{font:700 24px 'Barlow Condensed',sans-serif; line-height:1.1;}
+    .gid .gno{font:700 21px 'Barlow Condensed',sans-serif; line-height:1.1;}
   .gid button{flex:none; border:2px solid var(--line); background:var(--panel); color:var(--text);
               border-radius:11px; padding:11px 16px; font:600 15px 'Barlow',sans-serif; cursor:pointer;}
 
@@ -53,41 +53,41 @@
   .score .vs{color:var(--muted); font-size:14px; padding:0 10px;}
 
 
-  .status{border-radius:16px; padding:13px 16px 11px; margin-bottom:12px; border:2px solid;}
+  .status{border-radius:12px; padding:7px 12px 6px; margin-bottom:8px; border:2px solid;}
   .strip{display:flex; align-items:center; gap:12px;}
   .scoreline{display:flex; flex-direction:column; gap:8px; margin-top:10px; padding-top:10px;
              border-top:1px solid rgba(255,255,255,.12);}
   .sl{display:flex; align-items:center; gap:8px;}
   .sl u{text-decoration:none; font:600 16px 'Barlow',sans-serif; color:var(--muted);
         letter-spacing:.05em; flex:1;}
-  .sl b{font:700 30px 'Barlow Condensed',sans-serif; min-width:34px; text-align:center;
+    .sl b{font:700 26px 'Barlow Condensed',sans-serif; min-width:34px; text-align:center;
         line-height:1; font-variant-numeric:tabular-nums;}
   .sl button{width:44px; height:44px; border-radius:11px; border:1px solid var(--line);
              background:var(--panel2); color:var(--text); font-size:17px; cursor:pointer; line-height:1;}
   .status.offense{background:rgba(255,174,26,.13); border-color:var(--off);}
   .status.defense{background:rgba(49,217,198,.13); border-color:var(--def);}
-  .status .side{font:700 23px 'Barlow Condensed',sans-serif; line-height:1; flex:none;}
+    .status .side{font:700 19px 'Barlow Condensed',sans-serif; line-height:1; flex:none;}
   .status.offense .side{color:var(--off);} .status.defense .side{color:var(--def);}
-  .status .sub{font-size:13.5px; color:var(--muted); flex:1; min-width:0; line-height:1.2;}
+    .status .sub{font-size:13px; color:var(--muted); flex:1; min-width:0; line-height:1.2;}
   .status .dn{margin-left:auto; text-align:right;}
-  .status .dn b{font:700 28px 'Barlow Condensed',sans-serif; display:block; line-height:1;
+    .status .dn b{font:700 22px 'Barlow Condensed',sans-serif; display:block; line-height:1;
                 font-variant-numeric:tabular-nums;}
-  .status .dn span{font-size:13px; color:var(--muted);}
+    .status .dn span{font-size:12px; color:var(--muted);}
 
-  h2{margin:0 0 12px; font-size:14px; font-weight:600; color:var(--muted);
+  h2{margin:0 0 9px; font-size:13.5px; font-weight:600; color:var(--muted);
      display:flex; justify-content:space-between; align-items:baseline;}
   h2 em{font-style:normal; font-weight:500;}
-  .card{background:var(--panel); border:1px solid var(--line); border-radius:16px;
-        padding:16px; margin-bottom:14px;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px;
+        padding:12px; margin-bottom:10px;}
 
-  .chips{display:flex; flex-wrap:wrap; gap:9px;}
-  .chip{position:relative; width:66px; height:66px; border-radius:14px; border:2px solid var(--line);
+  .chips{display:flex; flex-wrap:wrap; gap:7px;}
+  .chip{position:relative; width:58px; height:58px; border-radius:12px; border:2px solid var(--line);
         background:var(--panel2); color:var(--text); cursor:pointer; padding:0;
         display:flex; flex-direction:column; align-items:center; justify-content:center;
         transition:transform .08s;}
   .chip:active{transform:scale(.92);}
-  .chip b{font:700 30px 'Barlow Condensed',sans-serif; line-height:1; font-variant-numeric:tabular-nums;}
-  .chip i{font-style:normal; font-size:13px; font-weight:600; color:var(--muted); margin-top:3px;}
+    .chip b{font:700 26px 'Barlow Condensed',sans-serif; line-height:1; font-variant-numeric:tabular-nums;}
+    .chip i{font-style:normal; font-size:12px; font-weight:600; color:var(--muted); margin-top:3px;}
   .field .chip{border-color:#4A5D72; background:#28323E;}
   .chip.short{border-color:var(--warn);} .chip.short i{color:var(--warn);}
   .chip.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
@@ -98,14 +98,14 @@
   .bench .chip{opacity:.75;}
 
   .next{border:2px solid var(--line);}
-  .counter{display:flex; align-items:center; gap:16px; margin-bottom:14px;}
+  .counter{display:flex; align-items:center; gap:13px; margin-bottom:10px;}
   .cnum{display:flex; align-items:baseline; gap:7px; flex:none;}
-  .cnum b{font:700 62px 'Barlow Condensed',sans-serif; line-height:.85;
+    .cnum b{font:700 48px 'Barlow Condensed',sans-serif; line-height:.85;
           font-variant-numeric:tabular-nums;}
   .cnum span{font:600 17px 'Barlow',sans-serif; color:var(--muted);}
   .cmsg{min-width:0; flex:1;}
-  .ctitle{font:600 18px 'Barlow',sans-serif; line-height:1.2;}
-  .csub{font-size:14.5px; color:var(--muted); margin-top:3px;}
+    .ctitle{font:600 16.5px 'Barlow',sans-serif; line-height:1.2;}
+  .csub{font-size:14px; color:var(--muted); margin-top:2px;}
 
   /* swap due: the whole card lights up */
   .next.due{border-color:var(--off); background:rgba(255,174,26,.16);
@@ -126,7 +126,7 @@
   }
   .snap.duering{box-shadow:0 0 0 4px rgba(255,174,26,.55);}
   @media (prefers-reduced-motion:reduce){ .next.due{animation:none; box-shadow:0 0 0 4px rgba(255,174,26,.3);} }
-  .nums{display:flex; gap:10px; align-items:center; margin-bottom:8px;}
+  .nums{display:flex; gap:10px; align-items:center; margin-bottom:6px;}
   .nums u{text-decoration:none; font-size:13px; color:var(--muted); width:30px; flex:none; font-weight:600;}
   .nums>span{display:flex; gap:7px; flex-wrap:wrap; flex:1; min-width:0;}
   .nums b{font:700 27px 'Barlow Condensed',sans-serif; min-width:44px; min-height:44px;
@@ -185,20 +185,20 @@
 
   .dock{position:fixed; left:0; right:0; bottom:0;
         background:linear-gradient(180deg,rgba(11,15,20,.72),var(--bg) 22%);
-        padding:10px 14px calc(14px + env(safe-area-inset-bottom)); z-index:30;}
+        padding:8px 14px calc(8px + env(safe-area-inset-bottom)); z-index:30;}
   .dockin{max-width:600px; margin:0 auto;}
-  .snap{width:100%; border:0; border-radius:18px; height:94px; cursor:pointer; color:#0B0F14;
-        font:700 34px 'Barlow Condensed',sans-serif; letter-spacing:.02em;}
+  .snap{width:100%; border:0; border-radius:16px; height:74px; cursor:pointer; color:#0B0F14;
+        font:700 29px 'Barlow Condensed',sans-serif; letter-spacing:.02em;}
   .snap[data-m=offense]{background:var(--off);} .snap[data-m=defense]{background:var(--def);}
-  .snap small{display:block; font:600 14px 'Barlow',sans-serif; opacity:.72; letter-spacing:0; margin-top:3px;}
+    .snap small{display:block; font:600 13px 'Barlow',sans-serif; opacity:.72; letter-spacing:0; margin-top:3px;}
   .snap:active{filter:brightness(.85);}
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:9px;}
-  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin-top:9px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:7px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-top:7px;}
   .grid2 button,.grid3 button{border:2px solid var(--line); background:var(--panel); color:var(--text);
-    border-radius:13px; height:62px; cursor:pointer; padding:0 4px;
-    font:600 16px 'Barlow',sans-serif; line-height:1.15;}
-  .grid2 button small,.grid3 button small{display:block; font-size:12.5px; color:var(--muted);
-    font-weight:500; margin-top:2px;}
+    border-radius:12px; height:52px; cursor:pointer; padding:0 4px;
+    font:600 15px 'Barlow',sans-serif; line-height:1.15;}
+  .grid2 button small,.grid3 button small{display:block; font-size:11.5px; color:var(--muted);
+    font-weight:500; margin-top:1px;}
   .grid2 button:active,.grid3 button:active{background:var(--panel2);}
   .grid2 button:disabled{opacity:.32;}
   .pat{border-color:var(--ok) !important; color:var(--ok) !important;}
@@ -316,14 +316,6 @@
         <div class="nums"><u>Out</u><span id="outNums"></span></div>
         <button class="big fill" id="btnSub">Make these subs</button>
         <div id="subExtra"></div>
-      </div>
-
-      <div class="status offense" id="status">
-        <div class="strip">
-          <div class="side" id="sideLabel">OFFENSE</div>
-          <div class="sub" id="sideSub"></div>
-          <div class="dn"><b id="downNum">1st</b><span>down</span></div>
-        </div>
       </div>
 
       <div id="alertBox"></div>
@@ -488,6 +480,13 @@
 
 <div class="dock hide" id="dock">
   <div class="dockin">
+    <div class="status offense" id="status">
+      <div class="strip">
+        <div class="side" id="sideLabel">OFFENSE</div>
+        <div class="sub" id="sideSub"></div>
+        <div class="dn"><b id="downNum">1st</b><span>down</span></div>
+      </div>
+    </div>
     <button class="snap" id="btnSnap" data-m="offense"></button>
     <div class="grid2" id="normalRow">
       <button id="btnFirst">First down<small>counts, back to 1st</small></button>
