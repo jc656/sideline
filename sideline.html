@@ -86,8 +86,12 @@
         display:flex; flex-direction:column; align-items:center; justify-content:center;
         transition:transform .08s;}
   .chip:active{transform:scale(.92);}
-    .chip b{font:700 26px 'Barlow Condensed',sans-serif; line-height:1; font-variant-numeric:tabular-nums;}
-    .chip i{font-style:normal; font-size:12px; font-weight:600; color:var(--muted); margin-top:3px;}
+    .chip b{font:700 25px 'Barlow Condensed',sans-serif; line-height:1; font-variant-numeric:tabular-nums;}
+  .chip s{position:absolute; top:3px; right:5px; text-decoration:none;
+          font:600 10px 'Barlow',sans-serif; color:var(--muted); font-variant-numeric:tabular-nums;}
+  .chip.short s{color:var(--warn);}
+    .chip i{font-style:normal; font:700 12px 'Barlow',sans-serif; color:var(--muted);
+          margin-top:3px; letter-spacing:.04em; text-transform:uppercase;}
   .field .chip{border-color:#4A5D72; background:#28323E;}
   .chip.short{border-color:var(--warn);} .chip.short i{color:var(--warn);}
   .chip.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
@@ -358,7 +362,7 @@
       <p class="hint">Tap to check a kid in or out. Works mid-game &mdash; anyone who leaves the field is replaced right away, and a late arrival slots into the rotation at his number.</p>
     </div>
     <div class="card">
-      <h2>Names <em>optional</em></h2>
+      <h2>Names <em>3 letters fit the chips</em></h2>
       <div id="names"></div>
       <button class="big outline" id="btnAddPlayer">Add another number</button>
     </div>
@@ -1009,11 +1013,17 @@ function chipHtml(n, where){
   var cls = short(n) ? 'short' : '';
   if (where === 'field' && pending.outL.indexOf(n) >= 0) cls = 'swout';
   else if (where === 'bench' && pending.inL.indexOf(n) >= 0) cls = 'swin';
-  var label = total(n);
+  var p = S.roster.filter(function(r){ return r.num === n; })[0];
+  var nm = p && p.name ? p.name.trim().slice(0,4) : '';
+  // With a name, the chip reads number + name and the play count moves to a
+  // corner badge. Without one, the count keeps the name slot as before.
+  var label = nm || total(n);
   if (where === 'field' && pending.outL.indexOf(n) >= 0) label = 'OUT';
   else if (where === 'bench' && pending.inL.indexOf(n) >= 0) label = 'IN';
   return '<button class="chip ' + cls +
-    '" data-n="' + n + '" data-w="' + where + '"><b>' + n + '</b><i>' + label + '</i></button>';
+    '" data-n="' + n + '" data-w="' + where + '">' +
+    (nm ? '<s>' + total(n) + '</s>' : '') +
+    '<b>' + n + '</b><i>' + esc(label) + '</i></button>';
 }
 
 // Keep page content scrollable clear of the fixed dock, whatever its real height
@@ -1201,7 +1211,7 @@ function render(){
   $('names').innerHTML = S.roster.map(function(p){
     return '<div class="set"><p class="rn" style="width:44px">' + p.num + '</p>' +
       '<input type="text" data-name="' + p.num + '" value="' +
-      esc(p.name||'') + '" placeholder="Name"></div>';
+      esc(p.name||'') + '" maxlength="4" placeholder="3 letters, e.g. CAM"></div>';
   }).join('');
 
   /* setup tab */
