@@ -118,15 +118,15 @@
   .next.due{border-color:var(--off); background:rgba(255,174,26,.16);
             animation:pulse 1.25s ease-in-out infinite;}
   /* when a swap is due the banner takes over the whole card */
-  .next.due .counter{display:block; text-align:center; margin-bottom:10px;}
-  .next.due .cnum{justify-content:center; margin-bottom:2px;}
-  .next.due .cnum b{color:var(--off); font-size:40px;}
-  .next.due .cnum span{color:var(--off); font-size:15px;}
-  .next.due .ctitle{color:var(--off); font:700 46px 'Barlow Condensed',sans-serif;
-                    letter-spacing:.02em; line-height:.95;}
-  .next.due .csub{font-size:16px; color:var(--text);}
+  .next.due .counter{gap:9px; align-items:baseline; margin-bottom:8px; flex-wrap:wrap;}
+  .next.due .cnum b{color:var(--off); font-size:30px;}
+  .next.due .cnum span{color:var(--off); font-size:14px;}
+  .next.due .cmsg{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .next.due .ctitle{color:var(--off); font:700 30px 'Barlow Condensed',sans-serif;
+                    letter-spacing:.02em; line-height:1; flex:none;}
+  .next.due .csub{font-size:14px; color:var(--text); margin-top:0; flex:1; min-width:0;}
   .next.due .nums b{border-color:var(--off);}
-  .next.due #btnSub{background:var(--off); color:#0B0F14; font-size:20px; padding:18px;}
+  .next.due #btnSub{background:var(--off); color:#0B0F14; font-size:18px; padding:14px;}
   @keyframes pulse{
     0%,100%{box-shadow:0 0 0 0 rgba(255,174,26,0);}
     50%{box-shadow:0 0 0 5px rgba(255,174,26,.28);}
@@ -141,6 +141,8 @@
           padding:8px 8px; border-radius:10px; background:var(--panel2); border:1px solid var(--line);
           font-variant-numeric:tabular-nums; cursor:pointer; -webkit-tap-highlight-color:transparent;}
   .nums b:active{opacity:.6; transform:scale(.92);}
+  .nums b u{text-decoration:none; font:700 11px 'Barlow',sans-serif; color:var(--muted);
+            letter-spacing:.04em; text-transform:uppercase; margin-left:5px;}
 
   button.big{width:100%; border:0; border-radius:14px; padding:18px; cursor:pointer;
              font:600 18px 'Barlow',sans-serif; margin-top:12px;}
@@ -1158,8 +1160,14 @@ function render(){
     $('cSub').textContent = left + ' more, then swap ' + pending.inL.join(', ') + ' in.';
   }
   var dash = '<b style="border:0;background:none;color:var(--muted)">&mdash;</b>';
-  $('inNums').innerHTML  = pending.inL.length  ? pending.inL.map(function(n){return '<b data-pi="'+n+'">'+n+'</b>';}).join('')  : dash;
-  $('outNums').innerHTML = pending.outL.length ? pending.outL.map(function(n){return '<b data-po="'+n+'">'+n+'</b>';}).join('') : dash;
+  function numChip(n, attr){
+    var p = S.roster.filter(function(r){ return r.num === n; })[0];
+    var nm = p && p.name ? p.name.trim().slice(0,4) : '';
+    return '<b data-' + attr + '="' + n + '">' + n +
+      (nm ? '<u>' + esc(nm) + '</u>' : '') + '</b>';
+  }
+  $('inNums').innerHTML  = pending.inL.length  ? pending.inL.map(function(n){ return numChip(n,'pi'); }).join('')  : dash;
+  $('outNums').innerHTML = pending.outL.length ? pending.outL.map(function(n){ return numChip(n,'po'); }).join('') : dash;
   var balanced = pending.inL.length > 0 && pending.inL.length === pending.outL.length;
   $('btnSub').disabled = !balanced;
   $('btnSub').textContent = !canSwap ? 'Nobody available to swap'
@@ -1589,7 +1597,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v11';
+var APP_VERSION = 'v12';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
