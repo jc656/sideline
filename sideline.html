@@ -90,6 +90,8 @@
   .chip s{position:absolute; top:3px; right:5px; text-decoration:none;
           font:600 10px 'Barlow',sans-serif; color:var(--muted); font-variant-numeric:tabular-nums;}
   .chip.short s{color:var(--warn);}
+  .chip.swout s{color:var(--warn); font-size:11px; font-weight:700;}
+  .chip.swin s{color:var(--ok); font-size:11px; font-weight:700;}
     .chip i{font-style:normal; font:700 12px 'Barlow',sans-serif; color:var(--muted);
           margin-top:3px; letter-spacing:.04em; text-transform:uppercase;}
   .field .chip{border-color:#4A5D72; background:#28323E;}
@@ -1017,12 +1019,15 @@ function chipHtml(n, where){
   var nm = p && p.name ? p.name.trim().slice(0,4) : '';
   // With a name, the chip reads number + name and the play count moves to a
   // corner badge. Without one, the count keeps the name slot as before.
-  var label = nm || total(n);
-  if (where === 'field' && pending.outL.indexOf(n) >= 0) label = 'OUT';
-  else if (where === 'bench' && pending.inL.indexOf(n) >= 0) label = 'IN';
+  // Named chips keep the name on the line and flag the swap in the corner badge;
+  // unnamed chips have only the one line, so IN/OUT takes it.
+  var swap = (where === 'field' && pending.outL.indexOf(n) >= 0) ? 'OUT'
+           : (where === 'bench' && pending.inL.indexOf(n) >= 0) ? 'IN' : '';
+  var label = nm ? nm : (swap || total(n));
+  var badge = nm ? (swap || total(n)) : '';
   return '<button class="chip ' + cls +
     '" data-n="' + n + '" data-w="' + where + '">' +
-    (nm ? '<s>' + total(n) + '</s>' : '') +
+    (badge ? '<s>' + esc(badge) + '</s>' : '') +
     '<b>' + n + '</b><i>' + esc(label) + '</i></button>';
 }
 
