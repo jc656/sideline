@@ -1,4 +1,4 @@
-var CACHE = 'sideline-v9';
+var CACHE = 'sideline-v10';
 var PRECACHE = [
   'sideline.html',
   'manifest.json',
@@ -15,6 +15,10 @@ self.addEventListener('install', function(e) {
       return self.skipWaiting();
     })
   );
+});
+
+self.addEventListener('message', function(e) {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', function(e) {

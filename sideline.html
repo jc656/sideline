@@ -437,6 +437,11 @@
     </div>
 
     <div class="card">
+      <h2>Version <em id="appVer"></em></h2>
+      <p class="hint" style="margin:0">If a change I asked for isn't here, this number tells us whether the phone has the new version yet.</p>
+    </div>
+
+    <div class="card">
       <h2>Reset everything</h2>
       <p class="hint" style="margin-top:0;color:var(--warn)">Wipes all data &mdash; roster, games, settings, everything. This cannot be undone. Download a backup first if you might want it back.</p>
       <div id="resetBox" class="hide" style="margin-top:12px">
@@ -1224,6 +1229,7 @@ function render(){
 
   $('vSubSize').textContent = S.subSize;
   $('vInterval').textContent = S.interval;
+  $('appVer').textContent = APP_VERSION;
   $('vGap').textContent = S.gapLimit;
   $('gapSub').textContent = gapLimit() > S.gapLimit
     ? 'Rotation alone puts kids ' + (naturalGap()-2) + ' behind, so this flags at ' + gapLimit()
@@ -1582,8 +1588,37 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
+var APP_VERSION = 'v10';
+function updateBanner(worker){
+  if (document.getElementById('updBanner')) return;
+  var b = document.createElement('div');
+  b.id = 'updBanner';
+  b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:60;background:var(--ok);color:#0B0F14;' +
+    'padding:calc(9px + env(safe-area-inset-top)) 14px 9px;font:700 15px Barlow,sans-serif;' +
+    'text-align:center;cursor:pointer;';
+  b.textContent = 'Update ready \u2014 tap to reload';
+  b.onclick = function(){
+    save(); saveSeason();
+    if (worker) worker.postMessage('SKIP_WAITING');
+    setTimeout(function(){ location.reload(); }, 150);
+  };
+  document.body.appendChild(b);
+}
 if ('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(function(){});
+  navigator.serviceWorker.register('sw.js').then(function(reg){
+    if (reg.waiting) updateBanner(reg.waiting);
+    reg.addEventListener('updatefound', function(){
+      var w = reg.installing;
+      if (!w) return;
+      w.addEventListener('statechange', function(){
+        if (w.state === 'installed' && navigator.serviceWorker.controller) updateBanner(w);
+      });
+    });
+    // A standalone app can sit suspended for days; check on every foreground.
+    document.addEventListener('visibilitychange', function(){
+      if (!document.hidden) reg.update().catch(function(){});
+    });
+  }).catch(function(){});
 }
 
 var renderCore = render;
