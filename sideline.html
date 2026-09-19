@@ -1222,9 +1222,12 @@ function render(){
 
   $('attChips').innerHTML = S.roster.map(function(p){
     var here = S.present.indexOf(p.num) >= 0;
+    var nm = p.name ? p.name.trim().slice(0,4) : '';
+    // Roll call reads by name, so the name gets the line and here/out the badge.
     return '<button class="chip" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
-      ';border-color:' + (here?'var(--ok)':'var(--line)') + '"><b>' + p.num + '</b><i>' +
-      (here?'here':'out') + '</i></button>';
+      ';border-color:' + (here?'var(--ok)':'var(--line)') + '">' +
+      (nm ? '<s>' + (here?'here':'out') + '</s>' : '') +
+      '<b>' + p.num + '</b><i>' + esc(nm || (here?'here':'out')) + '</i></button>';
   }).join('');
   $('hereMeta').textContent = S.present.length + ' of ' + S.roster.length;
 
@@ -1598,7 +1601,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v13';
+var APP_VERSION = 'v14';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
