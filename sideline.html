@@ -91,6 +91,17 @@
           font:600 10.5px 'Barlow',sans-serif; color:var(--muted); font-variant-numeric:tabular-nums;
           letter-spacing:.04em; margin-bottom:1px;}
   .chip.short s{color:var(--warn);}
+  .chip.qb::after{content:'QB'; position:absolute; bottom:2px; right:4px;
+                  font:700 8.5px 'Barlow',sans-serif; color:var(--link); letter-spacing:.03em;}
+  .chip.qb.now::after{color:var(--off); font-size:9.5px;}
+  .chip.qb.now{border-color:var(--off);}
+  .qbtog{flex:none; width:52px; height:40px; border-radius:10px; cursor:pointer;
+         border:2px solid var(--line); background:var(--panel2); color:var(--muted);
+         font:700 13px 'Barlow',sans-serif; letter-spacing:.04em;}
+  .qbtog.on{border-color:var(--link); color:var(--link); background:rgba(91,155,213,.16);}
+  .qbnow{flex:none; border:1px solid var(--link); border-radius:9px; background:rgba(91,155,213,.16);
+         color:var(--link); font:700 13px 'Barlow',sans-serif; padding:5px 8px; cursor:pointer;
+         letter-spacing:.03em;}
   .chip.swout s{color:var(--warn); font-size:11px; font-weight:700;}
   .chip.swin s{color:var(--ok); font-size:11px; font-weight:700;}
     .chip i{font-style:normal; font:700 12px 'Barlow',sans-serif; color:var(--muted);
@@ -234,6 +245,7 @@
   .pinpad button:active{background:var(--panel);}
   .hide{display:none;}
   .hint{font-size:15px; color:var(--muted); margin:12px 0 0;}
+  .hint.warn{color:var(--warn);}
   .ok{color:var(--ok);}
   @media (prefers-reduced-motion:reduce){ .flash{transition:none;} }
 </style>
@@ -363,9 +375,10 @@
       <p class="hint">Tap to check a kid in or out. Works mid-game &mdash; anyone who leaves the field is replaced right away, and a late arrival slots into the rotation at his number.</p>
     </div>
     <div class="card">
-      <h2>Names <em>3 letters fit the chips</em></h2>
+      <h2>Names and QBs <em id="qbMeta"></em></h2>
       <div id="names"></div>
       <button class="big outline" id="btnAddPlayer">Add another number</button>
+      <p class="hint" id="qbHint">Tap QB for every kid who can throw. The rotation always keeps at least one of them on the field.</p>
     </div>
   </div>
 
@@ -494,6 +507,7 @@
       <div class="strip">
         <div class="side" id="sideLabel">OFFENSE</div>
         <div class="sub" id="sideSub"></div>
+        <button class="qbnow hide" id="btnQbNow"></button>
         <div class="dn"><b id="downNum">1st</b><span>down</span></div>
       </div>
     </div>
@@ -520,7 +534,7 @@
 
 <script>
 var S = {
-  team: '', roster: [], present: [], field: [], stats: {}, entry: {}, exit: {}, tick: 0,
+  team: '', roster: [], present: [], field: [], stats: {}, entry: {}, exit: {}, qbs: {}, qbNow: null, tick: 0,
   starters: [], started: null, live: false,
   fieldSize: 6, subSize: 3, interval: 4, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
@@ -617,6 +631,32 @@ function assign(l){ l.forEach(function(n){ S.entry[n] = ++S.tick; }); }
 function release(l){ if (!S.exit) S.exit = {}; l.forEach(function(n){ S.exit[n] = ++S.tick; }); }
 // Longest-waiting first; nobody who has never played waits behind someone who has.
 // Ties (start of game, or two kids pulled together) fall back to jersey order.
+function isQb(n){
+  var p = S.roster.filter(function(r){ return r.num === n; })[0];
+  return !!(p && p.qb);
+}
+function qbsPresent(){ return S.present.filter(isQb); }
+function qbSnaps(n){ return (S.qbs || {})[n] || 0; }
+// Fewest QB snaps first, then fewest total plays, then jersey order. Keeps the
+// armband moving instead of parking on one kid all game.
+function qbOrder(list){
+  return list.slice().sort(function(a,c){
+    return qbSnaps(a)-qbSnaps(c) || total(a)-total(c) || a-c; });
+}
+function eligibleQbs(){ return S.field.filter(isQb); }
+function pickQb(force){
+  var e = eligibleQbs();
+  if (!e.length){ S.qbNow = null; return; }
+  if (!force && S.qbNow != null && e.indexOf(S.qbNow) >= 0) return;
+  S.qbNow = qbOrder(e)[0];
+}
+function nextQb(){
+  var e = qbOrder(eligibleQbs());
+  if (e.length < 2) return;
+  var i = e.indexOf(S.qbNow);
+  S.qbNow = e[(i + 1) % e.length];
+}
+function hasQb(list){ return list.some(isQb); }
 function waiting(list){
   return list.slice().sort(function(a,c){
     return ((S.exit||{})[a]||0) - ((S.exit||{})[c]||0) || a - c; });
@@ -670,6 +710,10 @@ function randomStart(){
   var k = Math.min(S.fieldSize, o.length);
   var r = Math.floor(Math.random() * o.length), out = [];
   for (var i=0;i<k;i++) out.push(o[(r+i) % o.length]);
+  var qbs = qbsPresent();
+  if (qbs.length && !hasQb(out)){
+    out[out.length-1] = qbs[Math.floor(Math.random() * qbs.length)];
+  }
   return out;
 }
 function setStarters(list){
@@ -694,7 +738,35 @@ function suggest(){
     outL = S.field.slice().sort(function(a,c){
       return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0,k);
   }
-  return {inL:inL, outL:outL.slice(0, inL.length)};
+  outL = outL.slice(0, inL.length);
+  return keepQb(inL, outL);
+}
+
+// Never leave the field without someone who can throw. First try bringing on the
+// longest-waiting QB; if the bench has none, keep a QB who was about to come off.
+function keepQb(inL, outL){
+  if (!qbsPresent().length) return {inL:inL, outL:outL};
+  var after = S.field.filter(function(n){ return outL.indexOf(n) < 0; }).concat(inL);
+  if (hasQb(after)) return {inL:inL, outL:outL};
+
+  var benchQb = qbOrder(waiting(bench().filter(isQb)))[0];
+  if (benchQb != null){
+    var swapOut = inL.filter(function(n){ return !isQb(n); }).pop();
+    if (swapOut != null){
+      inL = inL.map(function(n){ return n === swapOut ? benchQb : n; });
+      return {inL:inL, outL:outL};
+    }
+  }
+  var stay = outL.filter(isQb)[0];
+  if (stay != null){
+    outL = outL.filter(function(n){ return n !== stay; });
+    var extra = S.field.filter(function(n){
+      return outL.indexOf(n) < 0 && n !== stay; })
+      .sort(function(a,c){ return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); })[0];
+    if (extra != null) outL = outL.concat([extra]);
+    else inL = inL.slice(0, outL.length);
+  }
+  return {inL:inL, outL:outL};
 }
 
 function doSub(inL, outL){
@@ -703,6 +775,7 @@ function doSub(inL, outL){
   S.field = S.field.filter(function(n){ return outL.indexOf(n) < 0; }).concat(inL);
   release(outL);
   assign(inL);
+  pickQb();
   S.since = 0; sel = {field:null, bench:null, start:sel.start};
   pending = { inL: [], outL: [], auto: true };
   blink(); render(); save();
@@ -712,8 +785,11 @@ function fillField(){
   var guard = 0;
   while (S.field.length < S.fieldSize && bench().length && guard++ < 40){
     var b = bench(), pick = null;
-    if (S.rotation === 'catchup') pick = b.slice().sort(function(a,c){ return total(a)-total(c) || a-c; })[0];
-    else pick = waiting(b)[0];
+    var needQb = qbsPresent().length && !hasQb(S.field) &&
+                 S.field.length + 1 >= Math.min(S.fieldSize, S.present.length);
+    var pool = needQb && b.filter(isQb).length ? b.filter(isQb) : b;
+    if (S.rotation === 'catchup') pick = pool.slice().sort(function(a,c){ return total(a)-total(c) || a-c; })[0];
+    else pick = waiting(pool)[0];
     S.field.push(pick); assign([pick]);
   }
   while (S.field.length > S.fieldSize){
@@ -729,12 +805,20 @@ function countPlay(){
     if (!S.stats[n]) S.stats[n] = {off:0, def:0};
     S.stats[n][S.mode === 'offense' ? 'off' : 'def']++;
   });
+  if (S.mode === 'offense'){
+    pickQb();
+    if (S.qbNow != null){
+      if (!S.qbs) S.qbs = {};
+      S.qbs[S.qbNow] = (S.qbs[S.qbNow] || 0) + 1;
+    }
+  }
   S.play++;
   if (S.trigger === 'plays') S.since++;
 }
 function flipSide(){
   S.mode = S.mode === 'offense' ? 'defense' : 'offense';
   S.down = 1;
+  if (S.mode === 'offense') pickQb(true);
   if (S.trigger === 'possessions') S.since++;
 }
 var ask4 = false;  // 4th-down outcome prompt; UI-only, nothing recorded until a choice
@@ -771,7 +855,7 @@ function pat(points){
 /* ---------- game lifecycle ---------- */
 function startGame(){
   snapshot('undo start');
-  S.stats = {}; S.entry = {}; S.exit = {}; S.tick = 0;
+  S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false;
   S.mode = 'offense'; S.started = new Date().toISOString(); S.live = true;
   S.present.forEach(function(n){ S.stats[n] = {off:0, def:0}; });
@@ -1021,7 +1105,8 @@ function chipHtml(n, where){
            : (where === 'bench' && pending.inL.indexOf(n) >= 0) ? 'IN' : '';
   var label = nm ? nm : (swap || total(n));
   var badge = nm ? (swap || total(n)) : '';
-  return '<button class="chip ' + cls +
+  return '<button class="chip ' + cls + (isQb(n) ? ' qb' : '') +
+    (n === S.qbNow && where === 'field' ? ' now' : '') +
     '" data-n="' + n + '" data-w="' + where + '">' +
     (badge ? '<s>' + esc(badge) + '</s>' : '') +
     '<b>' + n + '</b><i>' + esc(label) + '</i></button>';
@@ -1054,7 +1139,7 @@ function render(){
 
     $('wizAtt').innerHTML = S.roster.map(function(p){
       var here = S.present.indexOf(p.num) >= 0;
-      return '<button class="chip" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
+      return '<button class="chip' + (p.qb ? ' qb' : '') + '" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
         ';border-color:' + (here?'var(--ok)':'var(--line)') + '"><b>' + p.num + '</b><i>' +
         (here?'here':'out') + '</i></button>';
     }).join('');
@@ -1177,6 +1262,16 @@ function render(){
   $('normalRow').classList.toggle('hide', S.pat || ask4);
   $('patRow').classList.toggle('hide', !S.pat);
   $('fourthRow').classList.toggle('hide', !ask4);
+  var qbBtn = $('btnQbNow');
+  if (S.mode === 'offense' && S.qbNow != null){
+    var qp = S.roster.filter(function(r){ return r.num === S.qbNow; })[0];
+    qbBtn.textContent = 'QB ' + S.qbNow + (qp && qp.name ? ' ' + qp.name.trim().slice(0,4).toUpperCase() : '') +
+      ' \u00b7 ' + qbSnaps(S.qbNow);
+    qbBtn.classList.remove('hide');
+    qbBtn.disabled = eligibleQbs().length < 2;
+  } else {
+    qbBtn.classList.add('hide');
+  }
   $('turnSub').innerHTML = '&rarr; ' + (S.mode === 'offense' ? 'defense' : 'offense');
   $('turn4Sub').innerHTML = $('turnSub').innerHTML;
   $('btnUndo').disabled = !undoStack.length;
@@ -1193,7 +1288,8 @@ function render(){
     return '<div class="row ' + (here?'':'out') + '"><p class="rn">' + p.num + '</p>' +
       '<div><div class="bar"><u class="bo" style="width:' + (st.off/max*100) + '%"></u>' +
       '<u class="bd" style="width:' + (st.def/max*100) + '%"></u></div>' +
-      '<div class="cap">' + (p.name ? esc(p.name) + ' \u00b7 ' : '') + status + '</div></div>' +
+      '<div class="cap">' + (p.name ? esc(p.name) + ' \u00b7 ' : '') + status +
+      (p.qb ? ' \u00b7 ' + qbSnaps(p.num) + ' at QB' : '') + '</div></div>' +
       '<div class="rt"><b class="' + (here && short(p.num) ? 'short':'') + '">' + t + '</b>' +
       st.off + 'o / ' + st.def + 'd</div></div>';
   }).join('');
@@ -1202,7 +1298,7 @@ function render(){
     var here = S.present.indexOf(p.num) >= 0;
     var nm = p.name ? p.name.trim().slice(0,4) : '';
     // Roll call reads by name, so the name gets the line and here/out the badge.
-    return '<button class="chip" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
+    return '<button class="chip' + (p.qb ? ' qb' : '') + '" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
       ';border-color:' + (here?'var(--ok)':'var(--line)') + '">' +
       (nm ? '<s>' + (here?'here':'out') + '</s>' : '') +
       '<b>' + p.num + '</b><i>' + esc(nm || (here?'here':'out')) + '</i></button>';
@@ -1212,8 +1308,17 @@ function render(){
   $('names').innerHTML = S.roster.map(function(p){
     return '<div class="set"><p class="rn" style="width:44px">' + p.num + '</p>' +
       '<input type="text" data-name="' + p.num + '" value="' +
-      esc(p.name||'') + '" maxlength="4" placeholder="3 letters, e.g. MKE"></div>';
+      esc(p.name||'') + '" maxlength="4" placeholder="3 letters, e.g. MKE">' +
+      '<button class="qbtog' + (p.qb ? ' on' : '') + '" data-qb="' + p.num + '">QB</button></div>';
   }).join('');
+  var nq = qbsPresent().length;
+  $('qbMeta').textContent = nq + ' of ' + S.present.length + ' here';
+  $('qbHint').textContent = nq === 0
+    ? 'Tap QB for every kid who can throw. With none marked, the rotation ignores this.'
+    : nq === 1
+      ? 'Only one QB here, so they will be on the field almost every play and the others will play less. Mark a second if you can.'
+      : 'The rotation always keeps at least one QB on the field.';
+  $('qbHint').className = nq === 1 ? 'hint warn' : 'hint';
 
   /* setup tab */
   if (document.activeElement !== $('teamInput')) $('teamInput').value = S.team || '';
@@ -1330,6 +1435,12 @@ document.addEventListener('click', function(e){
     }
     return render();
   }
+  if (t.dataset.qb){
+    var qn = +t.dataset.qb;
+    var qp = S.roster.filter(function(r){ return r.num === qn; })[0];
+    if (qp){ qp.qb = !qp.qb; save(); }
+    return render();
+  }
   if (t.dataset.att){
     var an = +t.dataset.att; snapshot('undo check-in');
     if (S.present.indexOf(an) >= 0){
@@ -1386,6 +1497,7 @@ document.addEventListener('click', function(e){
   }
 
   switch(t.id){
+    case 'btnQbNow': snapshot('undo QB change'); nextQb(); render(); save(); return;
     case 'btnSnap':  return runPlay('play');
     case 'btn4First': return runPlay('first');
     case 'btn4TD':    return runPlay('td');
@@ -1529,7 +1641,7 @@ function resetEverything(){
   if ($('resetConfirm').value !== 'RESET') return;
   try{ localStorage.removeItem('fb:state'); localStorage.removeItem('fb:season'); }catch(e){}
   S = {
-    team:'', roster:[], present:[], field:[], stats:{}, entry:{}, exit:{}, tick:0,
+    team:'', roster:[], present:[], field:[], stats:{}, entry:{}, exit:{}, qbs:{}, qbNow:null, tick:0,
     starters:[], started:null, live:false,
     fieldSize:6, subSize:3, interval:4, trigger:'plays', rotation:'sequence', gapLimit:6,
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
@@ -1567,7 +1679,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v15';
+var APP_VERSION = 'v17';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
