@@ -316,25 +316,20 @@
     </div>
 
     <div id="liveGame">
+      <div id="alertBox"></div>
+
       <div class="card next" id="nextCard">
         <div class="counter">
           <div class="cnum"><b id="cSince">0</b><span id="cOf">of 3</span></div>
           <div class="cmsg"><div class="ctitle" id="cTitle">Plays this rotation</div>
             <div class="csub" id="cSub"></div></div>
         </div>
-        <div class="nums"><u>In</u><span id="inNums"></span></div>
-        <div class="nums"><u>Out</u><span id="outNums"></span></div>
-        <button class="big fill" id="btnSub">Make these subs</button>
-        <div id="subExtra"></div>
-      </div>
-
-      <div id="alertBox"></div>
-
-      <div class="card">
         <h2>On field <em id="fieldMeta"></em></h2>
         <div class="chips field" id="fieldChips"></div>
-        <h2 style="margin:18px 0 12px">Bench <em id="benchMeta"></em></h2>
+        <h2 style="margin:14px 0 9px">Bench <em id="benchMeta"></em></h2>
         <div class="chips bench" id="benchChips"></div>
+        <button class="big fill" id="btnSub" style="margin-top:12px">Make these subs</button>
+        <div id="subExtra"></div>
         <p class="hint">Tap players to change the swap. Match the same number in and out.</p>
       </div>
 
@@ -525,9 +520,9 @@
 
 <script>
 var S = {
-  team: '', roster: [], present: [], field: [], stats: {}, entry: {}, tick: 0,
+  team: '', roster: [], present: [], field: [], stats: {}, entry: {}, exit: {}, tick: 0,
   starters: [], started: null, live: false,
-  fieldSize: 6, subSize: 3, interval: 3, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
+  fieldSize: 6, subSize: 3, interval: 4, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
   weeks: 8, slot: 1, pin: ''
 };
@@ -619,6 +614,13 @@ function shortList(){
   return S.present.filter(short).sort(function(a,c){ return total(a)-total(c) || a-c; });
 }
 function assign(l){ l.forEach(function(n){ S.entry[n] = ++S.tick; }); }
+function release(l){ if (!S.exit) S.exit = {}; l.forEach(function(n){ S.exit[n] = ++S.tick; }); }
+// Longest-waiting first; nobody who has never played waits behind someone who has.
+// Ties (start of game, or two kids pulled together) fall back to jersey order.
+function waiting(list){
+  return list.slice().sort(function(a,c){
+    return ((S.exit||{})[a]||0) - ((S.exit||{})[c]||0) || a - c; });
+}
 function gameByNo(n){
   for (var i=0;i<season.length;i++) if (season[i].no === n) return season[i];
   return null;
@@ -673,7 +675,7 @@ function randomStart(){
 function setStarters(list){
   S.field = list.slice(0, S.fieldSize);
   S.starters = S.field.slice().sort(function(a,c){ return a-c; });
-  S.entry = {}; S.tick = 0; assign(S.field);
+  S.entry = {}; S.exit = {}; S.tick = 0; assign(S.field);
   S.since = 0; sel = {field:null, bench:null, start:[]};
   render(); save();
 }
@@ -688,14 +690,7 @@ function suggest(){
     outL = S.field.slice().sort(function(a,c){
       return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0,k);
   } else {
-    var o = order();
-    var last = S.field.reduce(function(a,c){
-      return (S.entry[c]||0) > (S.entry[a]||0) ? c : a; }, S.field[0]);
-    var p = o.indexOf(last); inL = [];
-    for (var i=1; i<=o.length && inL.length<k; i++){
-      var n = o[(p+i+o.length) % o.length];
-      if (b.indexOf(n) >= 0 && inL.indexOf(n) < 0) inL.push(n);
-    }
+    inL = waiting(b).slice(0,k);
     outL = S.field.slice().sort(function(a,c){
       return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0,k);
   }
@@ -706,6 +701,7 @@ function doSub(inL, outL){
   if (!inL.length || !outL.length) return;
   snapshot('undo subs');
   S.field = S.field.filter(function(n){ return outL.indexOf(n) < 0; }).concat(inL);
+  release(outL);
   assign(inL);
   S.since = 0; sel = {field:null, bench:null, start:sel.start};
   pending = { inL: [], outL: [], auto: true };
@@ -717,22 +713,13 @@ function fillField(){
   while (S.field.length < S.fieldSize && bench().length && guard++ < 40){
     var b = bench(), pick = null;
     if (S.rotation === 'catchup') pick = b.slice().sort(function(a,c){ return total(a)-total(c) || a-c; })[0];
-    else {
-      var o = order();
-      var last = S.field.length ? S.field.reduce(function(a,c){
-        return (S.entry[c]||0) > (S.entry[a]||0) ? c : a; }, S.field[0]) : null;
-      var p = last ? o.indexOf(last) : -1;
-      for (var i=1;i<=o.length;i++){
-        var n = o[(p+i+o.length)%o.length];
-        if (b.indexOf(n) >= 0){ pick = n; break; }
-      }
-      if (pick == null) pick = b[0];
-    }
+    else pick = waiting(b)[0];
     S.field.push(pick); assign([pick]);
   }
   while (S.field.length > S.fieldSize){
     var drop = S.field.slice().sort(function(a,c){ return (S.entry[a]||0)-(S.entry[c]||0); })[0];
     S.field = S.field.filter(function(x){ return x !== drop; });
+    release([drop]);
   }
 }
 
@@ -784,7 +771,7 @@ function pat(points){
 /* ---------- game lifecycle ---------- */
 function startGame(){
   snapshot('undo start');
-  S.stats = {}; S.entry = {}; S.tick = 0;
+  S.stats = {}; S.entry = {}; S.exit = {}; S.tick = 0;
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false;
   S.mode = 'offense'; S.started = new Date().toISOString(); S.live = true;
   S.present.forEach(function(n){ S.stats[n] = {off:0, def:0}; });
@@ -1160,15 +1147,6 @@ function render(){
     $('cTitle').textContent = unit === 'play' ? 'Plays this rotation' : 'Possessions this rotation';
     $('cSub').textContent = left + ' more, then swap ' + pending.inL.join(', ') + ' in.';
   }
-  var dash = '<b style="border:0;background:none;color:var(--muted)">&mdash;</b>';
-  function numChip(n, attr){
-    var p = S.roster.filter(function(r){ return r.num === n; })[0];
-    var nm = p && p.name ? p.name.trim().slice(0,4) : '';
-    return '<b data-' + attr + '="' + n + '">' + n +
-      (nm ? '<u>' + esc(nm) + '</u>' : '') + '</b>';
-  }
-  $('inNums').innerHTML  = pending.inL.length  ? pending.inL.map(function(n){ return numChip(n,'pi'); }).join('')  : dash;
-  $('outNums').innerHTML = pending.outL.length ? pending.outL.map(function(n){ return numChip(n,'po'); }).join('') : dash;
   var balanced = pending.inL.length > 0 && pending.inL.length === pending.outL.length;
   $('btnSub').disabled = !balanced;
   $('btnSub').textContent = !canSwap ? 'Nobody available to swap'
@@ -1338,18 +1316,6 @@ document.addEventListener('click', function(e){
   var t = e.target.closest('button'); if (!t) return;
   if (t.dataset.k) return pinKey(t.dataset.k);
 
-  if (t.dataset.pi){
-    pending.auto = false;
-    var idx = pending.inL.indexOf(+t.dataset.pi);
-    if (idx >= 0) pending.inL.splice(idx, 1);
-    return render();
-  }
-  if (t.dataset.po){
-    pending.auto = false;
-    var idx = pending.outL.indexOf(+t.dataset.po);
-    if (idx >= 0) pending.outL.splice(idx, 1);
-    return render();
-  }
   if (t.dataset.n){
     var w = t.dataset.w, n = +t.dataset.n;
     pending.auto = false;
@@ -1370,7 +1336,7 @@ document.addEventListener('click', function(e){
       S.present = S.present.filter(function(x){ return x !== an; });
       var was = S.field.indexOf(an) >= 0;
       S.field = S.field.filter(function(x){ return x !== an; });
-      if (was) fillField();
+      if (was){ release([an]); fillField(); }
     } else {
       S.present.push(an);
       if (!S.stats[an]) S.stats[an] = {off:0, def:0};
@@ -1455,7 +1421,7 @@ document.addEventListener('click', function(e){
       var goOut = S.field.slice().sort(function(a,c){
         return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0, goIn.length);
       S.field = S.field.filter(function(n){ return goOut.indexOf(n) < 0; }).concat(goIn);
-      assign(goIn); S.since = 0; S.rotation = 'catchup';
+      release(goOut); assign(goIn); S.since = 0; S.rotation = 'catchup';
       pending = { inL: [], outL: [], auto: true };
       blink(); render(); save(); return;
     }
@@ -1563,9 +1529,9 @@ function resetEverything(){
   if ($('resetConfirm').value !== 'RESET') return;
   try{ localStorage.removeItem('fb:state'); localStorage.removeItem('fb:season'); }catch(e){}
   S = {
-    team:'', roster:[], present:[], field:[], stats:{}, entry:{}, tick:0,
+    team:'', roster:[], present:[], field:[], stats:{}, entry:{}, exit:{}, tick:0,
     starters:[], started:null, live:false,
-    fieldSize:6, subSize:3, interval:3, trigger:'plays', rotation:'sequence', gapLimit:6,
+    fieldSize:6, subSize:3, interval:4, trigger:'plays', rotation:'sequence', gapLimit:6,
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
     weeks:8, slot:1, pin:''
   };
@@ -1601,7 +1567,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v14';
+var APP_VERSION = 'v15';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
