@@ -86,14 +86,15 @@
         display:flex; flex-direction:column; align-items:center; justify-content:center;
         transition:transform .08s;}
   .chip:active{transform:scale(.92);}
-    .chip b{font:700 25px 'Barlow Condensed',sans-serif; line-height:1; font-variant-numeric:tabular-nums;}
-  .chip s{position:absolute; top:3px; right:5px; text-decoration:none;
-          font:600 10px 'Barlow',sans-serif; color:var(--muted); font-variant-numeric:tabular-nums;}
+    .chip b{font:700 22px 'Barlow Condensed',sans-serif; line-height:1; font-variant-numeric:tabular-nums;}
+  .chip s{display:block; text-decoration:none; line-height:1;
+          font:600 10.5px 'Barlow',sans-serif; color:var(--muted); font-variant-numeric:tabular-nums;
+          letter-spacing:.04em; margin-bottom:1px;}
   .chip.short s{color:var(--warn);}
   .chip.swout s{color:var(--warn); font-size:11px; font-weight:700;}
   .chip.swin s{color:var(--ok); font-size:11px; font-weight:700;}
     .chip i{font-style:normal; font:700 12px 'Barlow',sans-serif; color:var(--muted);
-          margin-top:3px; letter-spacing:.04em; text-transform:uppercase;}
+          margin-top:2px; letter-spacing:.04em; text-transform:uppercase;}
   .field .chip{border-color:#4A5D72; background:#28323E;}
   .chip.short{border-color:var(--warn);} .chip.short i{color:var(--warn);}
   .chip.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
@@ -1588,7 +1589,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v10';
+var APP_VERSION = 'v11';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
