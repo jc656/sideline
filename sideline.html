@@ -91,13 +91,15 @@
           font:600 10.5px 'Barlow',sans-serif; color:var(--muted); font-variant-numeric:tabular-nums;
           letter-spacing:.04em; margin-bottom:1px;}
   .chip.short s{color:var(--warn);}
-  .chip.qb::after{content:'QB'; position:absolute; bottom:2px; right:4px;
-                  font:700 8.5px 'Barlow',sans-serif; color:var(--link); letter-spacing:.03em;}
-  .chip.qb.now::after{color:var(--off); font-size:9.5px;}
-  .chip.qb.now{border-color:var(--off);}
-  .qbtog{flex:none; width:52px; height:40px; border-radius:10px; cursor:pointer;
+  .chip.qb::after{content:'can qb'; position:absolute; bottom:2px; right:4px;
+                  font:600 8px 'Barlow',sans-serif; color:var(--link); letter-spacing:.02em;}
+  .chip.qb.now::after{content:'QB NOW'; color:#0B0F14; background:var(--off);
+                      border-radius:4px; padding:1px 3px; font:700 8.5px 'Barlow',sans-serif;
+                      bottom:3px; right:3px;}
+  .chip.qb.now{border-color:var(--off); box-shadow:0 0 0 2px rgba(255,174,26,.35);}
+  .qbtog{flex:none; width:66px; height:40px; border-radius:10px; cursor:pointer;
          border:2px solid var(--line); background:var(--panel2); color:var(--muted);
-         font:700 13px 'Barlow',sans-serif; letter-spacing:.04em;}
+         font:700 12.5px 'Barlow',sans-serif; letter-spacing:.02em;}
   .qbtog.on{border-color:var(--link); color:var(--link); background:rgba(91,155,213,.16);}
   .qbnow{flex:none; border:1px solid var(--link); border-radius:9px; background:rgba(91,155,213,.16);
          color:var(--link); font:700 13px 'Barlow',sans-serif; padding:5px 8px; cursor:pointer;
@@ -375,7 +377,7 @@
       <p class="hint">Tap to check a kid in or out. Works mid-game &mdash; anyone who leaves the field is replaced right away, and a late arrival slots into the rotation at his number.</p>
     </div>
     <div class="card">
-      <h2>Names and QBs <em id="qbMeta"></em></h2>
+      <h2>Names and who can play QB <em id="qbMeta"></em></h2>
       <div id="names"></div>
       <button class="big outline" id="btnAddPlayer">Add another number</button>
       <p class="hint" id="qbHint">Tap QB for every kid who can throw. The rotation always keeps at least one of them on the field.</p>
@@ -1276,8 +1278,8 @@ function render(){
   var qbBtn = $('btnQbNow');
   if (S.mode === 'offense' && S.qbNow != null){
     var qp = S.roster.filter(function(r){ return r.num === S.qbNow; })[0];
-    qbBtn.textContent = 'QB ' + S.qbNow + (qp && qp.name ? ' ' + qp.name.trim().slice(0,4).toUpperCase() : '') +
-      ' \u00b7 ' + qbSnaps(S.qbNow);
+    qbBtn.textContent = 'QB NOW \u00b7 ' + S.qbNow +
+      (qp && qp.name ? ' ' + qp.name.trim().slice(0,4).toUpperCase() : '');
     qbBtn.classList.remove('hide');
     qbBtn.disabled = eligibleQbs().length < 2;
   } else {
@@ -1300,7 +1302,7 @@ function render(){
       '<div><div class="bar"><u class="bo" style="width:' + (st.off/max*100) + '%"></u>' +
       '<u class="bd" style="width:' + (st.def/max*100) + '%"></u></div>' +
       '<div class="cap">' + (p.name ? esc(p.name) + ' \u00b7 ' : '') + status +
-      (p.qb ? ' \u00b7 ' + qbSnaps(p.num) + ' at QB' : '') + '</div></div>' +
+      (p.qb ? ' \u00b7 can QB, ' + qbSnaps(p.num) + ' snaps at QB' : '') + '</div></div>' +
       '<div class="rt"><b class="' + (here && short(p.num) ? 'short':'') + '">' + t + '</b>' +
       st.off + 'o / ' + st.def + 'd</div></div>';
   }).join('');
@@ -1320,15 +1322,15 @@ function render(){
     return '<div class="set"><p class="rn" style="width:44px">' + p.num + '</p>' +
       '<input type="text" data-name="' + p.num + '" value="' +
       esc(p.name||'') + '" maxlength="4" placeholder="3 letters, e.g. MKE">' +
-      '<button class="qbtog' + (p.qb ? ' on' : '') + '" data-qb="' + p.num + '">QB</button></div>';
+      '<button class="qbtog' + (p.qb ? ' on' : '') + '" data-qb="' + p.num + '">can QB</button></div>';
   }).join('');
   var nq = qbsPresent().length;
-  $('qbMeta').textContent = nq + ' of ' + S.present.length + ' here';
+  $('qbMeta').textContent = nq + ' eligible of ' + S.present.length + ' here';
   $('qbHint').textContent = nq === 0
-    ? 'Tap QB for every kid who can throw. With none marked, the rotation ignores this.'
+    ? 'Mark every kid who can throw. This is eligibility only \u2014 with none marked, the rotation ignores QBs.'
     : nq === 1
-      ? 'Only one QB here, so they will be on the field almost every play and the others will play less. Mark a second if you can.'
-      : 'The rotation always keeps at least one QB on the field.';
+      ? 'Only one eligible QB here, so they will be on the field almost every play and the others will play less. Mark a second if you can.'
+      : 'Eligibility only. The rotation keeps at least one eligible kid on the field, and picks who actually takes the snaps each possession \u2014 shown as QB NOW on the game screen.';
   $('qbHint').className = nq === 1 ? 'hint warn' : 'hint';
 
   /* setup tab */
@@ -1690,7 +1692,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v19';
+var APP_VERSION = 'v20';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
