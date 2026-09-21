@@ -1139,9 +1139,11 @@ function render(){
 
     $('wizAtt').innerHTML = S.roster.map(function(p){
       var here = S.present.indexOf(p.num) >= 0;
+      var nm = p.name ? p.name.trim().slice(0,4) : '';
       return '<button class="chip' + (p.qb ? ' qb' : '') + '" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
-        ';border-color:' + (here?'var(--ok)':'var(--line)') + '"><b>' + p.num + '</b><i>' +
-        (here?'here':'out') + '</i></button>';
+        ';border-color:' + (here?'var(--ok)':'var(--line)') + '">' +
+        (nm ? '<s>' + (here?'here':'out') + '</s>' : '') +
+        '<b>' + p.num + '</b><i>' + esc(nm || (here?'here':'out')) + '</i></button>';
     }).join('');
     $('wizHere').textContent = S.present.length + ' of ' + S.roster.length + ' here';
     $('btnStep1').disabled = S.present.length < 2;
@@ -1150,8 +1152,11 @@ function render(){
 
     $('wizStart').innerHTML = order().map(function(n){
       var on = sel.start.indexOf(n) >= 0;
-      return '<button class="chip ' + (on?'pick':'') + '" data-st="' + n + '"><b>' + n +
-        '</b><i>' + (on?'starts':'&nbsp;') + '</i></button>';
+      var pn = S.roster.filter(function(r){ return r.num === n; })[0];
+      var nm = pn && pn.name ? pn.name.trim().slice(0,4) : '';
+      return '<button class="chip ' + (on?'pick':'') + (isQb(n) ? ' qb' : '') + '" data-st="' + n + '">' +
+        (nm ? '<s>' + (on?'starts':'&nbsp;') + '</s>' : '') +
+        '<b>' + n + '</b><i>' + esc(nm || (on?'starts':'\u00a0')) + '</i></button>';
     }).join('');
     $('wizStartMeta').textContent = sel.start.length + ' of ' + S.fieldSize + ' picked';
     $('btnStep2').disabled = sel.start.length !== S.fieldSize;
@@ -1679,7 +1684,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v17';
+var APP_VERSION = 'v18';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
