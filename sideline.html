@@ -91,12 +91,11 @@
           font:600 10.5px 'Barlow',sans-serif; color:var(--muted); font-variant-numeric:tabular-nums;
           letter-spacing:.04em; margin-bottom:1px;}
   .chip.short s{color:var(--warn);}
-  .chip.qb::after{content:'can qb'; position:absolute; bottom:2px; right:4px;
-                  font:600 8px 'Barlow',sans-serif; color:var(--link); letter-spacing:.02em;}
-  .chip.qb.now::after{content:'QB NOW'; color:#0B0F14; background:var(--off);
-                      border-radius:4px; padding:1px 3px; font:700 8.5px 'Barlow',sans-serif;
-                      bottom:3px; right:3px;}
-  .chip.qb.now{border-color:var(--off); box-shadow:0 0 0 2px rgba(255,174,26,.35);}
+  .chip.qb::after{content:'qb'; position:absolute; bottom:2px; right:5px;
+                  font:700 9px 'Barlow',sans-serif; color:var(--link); letter-spacing:.04em;}
+  /* the kid actually taking snaps, eligible or not */
+  .qbpick .chip.now{border-color:var(--off); box-shadow:0 0 0 2px rgba(255,174,26,.35);}
+  .qbpick .chip.now i{color:var(--off);}
   .qbtog{flex:none; width:66px; height:40px; border-radius:10px; cursor:pointer;
          border:2px solid var(--line); background:var(--panel2); color:var(--muted);
          font:700 12.5px 'Barlow',sans-serif; letter-spacing:.02em;}
@@ -340,6 +339,10 @@
         </div>
         <h2>On field <em id="fieldMeta"></em></h2>
         <div class="chips field" id="fieldChips"></div>
+        <div id="qbSection" class="hide">
+          <h2 style="margin:14px 0 9px">QB <em id="qbRowMeta"></em></h2>
+          <div class="chips qbpick" id="qbChips"></div>
+        </div>
         <h2 style="margin:14px 0 9px">Bench <em id="benchMeta"></em></h2>
         <div class="chips bench" id="benchChips"></div>
         <button class="big fill" id="btnSub" style="margin-top:12px">Make these subs</button>
@@ -377,7 +380,7 @@
       <p class="hint">Tap to check a kid in or out. Works mid-game &mdash; anyone who leaves the field is replaced right away, and a late arrival slots into the rotation at his number.</p>
     </div>
     <div class="card">
-      <h2>Names and who can play QB <em id="qbMeta"></em></h2>
+      <h2>Names and QB <em id="qbMeta"></em></h2>
       <div id="names"></div>
       <button class="big outline" id="btnAddPlayer">Add another number</button>
       <p class="hint" id="qbHint">Tap QB for every kid who can throw. The rotation always keeps at least one of them on the field.</p>
@@ -646,14 +649,17 @@ function qbOrder(list){
     return qbSnaps(a)-qbSnaps(c) || total(a)-total(c) || a-c; });
 }
 function eligibleQbs(){ return S.field.filter(isQb); }
+// Auto-pick prefers the kids marked QB, but falls back to the whole field so
+// there is always someone taking snaps.
 function pickQb(force){
-  var e = eligibleQbs();
-  if (!e.length){ S.qbNow = null; return; }
-  if (!force && S.qbNow != null && e.indexOf(S.qbNow) >= 0) return;
-  S.qbNow = qbOrder(e)[0];
+  if (!S.field.length){ S.qbNow = null; return; }
+  if (!force && S.qbNow != null && S.field.indexOf(S.qbNow) >= 0) return;
+  var pool = eligibleQbs();
+  if (!pool.length) pool = S.field.slice();
+  S.qbNow = qbOrder(pool)[0];
 }
 function nextQb(){
-  var e = qbOrder(eligibleQbs());
+  var e = qbOrder(S.field);
   if (e.length < 2) return;
   var i = e.indexOf(S.qbNow);
   S.qbNow = e[(i + 1) % e.length];
@@ -1261,6 +1267,18 @@ function render(){
     .map(function(n){ return chipHtml(n,'field'); }).join('') || '<p class="hint">Nobody on the field.</p>';
   $('benchChips').innerHTML = b.slice().sort(function(a,c){return a-c;})
     .map(function(n){ return chipHtml(n,'bench'); }).join('') || '<p class="hint">Bench is empty.</p>';
+  var showQb = S.live && S.mode === 'offense';
+  $('qbSection').classList.toggle('hide', !showQb);
+  if (showQb){
+    $('qbChips').innerHTML = S.field.slice().sort(function(a,c){ return a-c; }).map(function(n){
+      var pq = S.roster.filter(function(r){ return r.num === n; })[0];
+      var nm = pq && pq.name ? pq.name.trim().slice(0,4) : '';
+      return '<button class="chip' + (isQb(n) ? ' qb' : '') + (n === S.qbNow ? ' now' : '') +
+        '" data-qbnow="' + n + '"><s>' + qbSnaps(n) + '</s><b>' + n + '</b><i>' +
+        esc(nm || (n === S.qbNow ? 'qb' : '\u00a0')) + '</i></button>';
+    }).join('');
+    $('qbRowMeta').textContent = 'tap to change \u00b7 number = snaps at QB';
+  }
   $('fieldMeta').textContent = S.field.length + ' of ' + S.fieldSize;
   $('benchMeta').textContent = b.length + ' waiting';
 
@@ -1322,15 +1340,15 @@ function render(){
     return '<div class="set"><p class="rn" style="width:44px">' + p.num + '</p>' +
       '<input type="text" data-name="' + p.num + '" value="' +
       esc(p.name||'') + '" maxlength="4" placeholder="3 letters, e.g. MKE">' +
-      '<button class="qbtog' + (p.qb ? ' on' : '') + '" data-qb="' + p.num + '">can QB</button></div>';
+      '<button class="qbtog' + (p.qb ? ' on' : '') + '" data-qb="' + p.num + '">QB</button></div>';
   }).join('');
   var nq = qbsPresent().length;
-  $('qbMeta').textContent = nq + ' eligible of ' + S.present.length + ' here';
+  $('qbMeta').textContent = nq + ' marked of ' + S.present.length + ' here';
   $('qbHint').textContent = nq === 0
-    ? 'Mark every kid who can throw. This is eligibility only \u2014 with none marked, the rotation ignores QBs.'
+    ? 'Mark the kids who can throw. It only guides the auto-subs \u2014 you can still hand the ball to anyone.'
     : nq === 1
-      ? 'Only one eligible QB here, so they will be on the field almost every play and the others will play less. Mark a second if you can.'
-      : 'Eligibility only. The rotation keeps at least one eligible kid on the field, and picks who actually takes the snaps each possession \u2014 shown as QB NOW on the game screen.';
+      ? 'Only one marked here, so the auto-subs will keep that kid on the field almost every play. Mark a second if you can.'
+      : 'This guides the auto-subs, which try to keep a marked kid on the field. Who actually takes the snaps is the QB row on the game screen, and can be anyone.';
   $('qbHint').className = nq === 1 ? 'hint warn' : 'hint';
 
   /* setup tab */
@@ -1447,6 +1465,11 @@ document.addEventListener('click', function(e){
       else pending.inL.push(n);
     }
     return render();
+  }
+  if (t.dataset.qbnow){
+    snapshot('undo QB change');
+    S.qbNow = +t.dataset.qbnow;
+    save(); return render();
   }
   if (t.dataset.qb){
     var qn = +t.dataset.qb;
@@ -1692,7 +1715,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v20';
+var APP_VERSION = 'v21';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
