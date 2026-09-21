@@ -873,6 +873,7 @@ function endGame(){
       plays: S.play, us: S.us, them: S.them,
       starters: S.starters.slice(),
       stats: JSON.parse(JSON.stringify(S.stats)),
+      qbs: JSON.parse(JSON.stringify(S.qbs || {})),
       names: S.roster.reduce(function(o,p){ o[p.num] = p.name; return o; }, {})
     });
     season.sort(function(a,c){ return a.no - c.no; });
@@ -880,6 +881,11 @@ function endGame(){
   }
   S.slot = nextOpenSlot();
   S.live = false; S.pat = false;
+  // The finished game is in the season list now; clear the live counters so the
+  // Team tab and the next game start from zero instead of last week's numbers.
+  S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
+  S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0;
+  S.field = []; S.starters = []; S.started = null;
   undoStack = [];
   pending = { inL: [], outL: [], auto: true };
   S.present = S.roster.map(function(p){ return p.num; });
@@ -1684,7 +1690,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v18';
+var APP_VERSION = 'v19';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
