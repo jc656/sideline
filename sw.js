@@ -1,6 +1,7 @@
-var CACHE = 'sideline-v22';
+var CACHE = 'sideline-v23';
 var PRECACHE = [
   'sideline.html',
+  'playbook-live.html',
   'manifest.json',
   'icon.svg',
   'icon-180.png',

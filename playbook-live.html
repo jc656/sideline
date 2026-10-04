@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Commanders Playbook: watch a play</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Playbook">
+<meta name="theme-color" content="#7A1F2B">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap">
+<style>
+:root{
+  --bg:#ffffff; --ink:#1b1b1b; --muted:#5a5a5a; --line:#d9d9d4; --panel:#f5f5f1;
+  --burg:#7A1F2B; --turf:#3F7A47; --turf2:#3A7242; --chalk:#ffffff;
+  --sans:'Barlow','Helvetica Neue',Helvetica,sans-serif; --cond:'Barlow Condensed','Arial Narrow',sans-serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#151515; --ink:#ededea; --muted:#a8a8a2; --line:#3a3a37; --panel:#202020; --burg:#C25566; } }
+:root[data-theme="dark"]{ --bg:#151515; --ink:#ededea; --muted:#a8a8a2; --line:#3a3a37; --panel:#202020; --burg:#C25566; }
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 16px 40px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-family:var(--cond);font-weight:800;font-size:clamp(28px,5vw,40px);line-height:1;margin:0;color:var(--burg);letter-spacing:.5px}
+header p{margin:0;color:var(--muted);font-size:15px}
+.layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+.stage{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:2;padding-bottom:8px}
+@media (max-width:860px){.stage{position:sticky;top:0;padding-top:4px;box-shadow:0 6px 10px -8px rgba(0,0,0,.35)} .hint{display:none} .scrubrow label{display:none} .scrubrow{margin-top:4px} .controls{gap:6px;margin-top:8px} .btn{font-size:18px;padding:0 12px;min-height:42px} .seg button{font-size:17px;padding:0 10px}}
+.fieldbox{position:relative;border-radius:12px;overflow:hidden;background:var(--turf)}
+svg#field{display:block;width:100%;height:auto}
+.count{position:absolute;left:12px;top:10px;font-family:var(--cond);font-weight:800;font-size:clamp(18px,3.4vw,26px);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.count.hot{color:#FFD86B}
+.banner{position:absolute;right:12px;top:10px;max-width:60%;text-align:right;font-family:var(--cond);font-weight:700;font-size:clamp(16px,3vw,22px);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.off circle{fill:#fff;stroke:#1b1b1b;stroke-width:2.5}
+.off text{font:700 14px var(--sans);fill:#1b1b1b;pointer-events:none}
+.off{cursor:pointer}
+.off.best circle{stroke:#FFD86B;stroke-width:4}
+.off:focus{outline:none}.off:focus-visible circle{stroke:#FFD86B;stroke-width:5}
+.def rect{fill:#7A1F2B;stroke:#fff;stroke-width:1.5}
+.def text{font:700 12px var(--sans);fill:#fff}
+.ball ellipse{fill:#8B4A22;stroke:#fff;stroke-width:1.2}.ball line{stroke:#fff;stroke-width:1.2}
+.flag path{fill:#FFD86B;stroke:#1b1b1b;stroke-width:1.5}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+button{font:inherit}
+.btn{min-height:44px;padding:0 18px;border-radius:10px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);font-family:var(--cond);font-weight:800;font-size:20px;letter-spacing:.5px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg{display:inline-flex;border:2px solid var(--ink);border-radius:10px;overflow:hidden}
+.seg button{min-height:40px;padding:0 14px;border:0;background:transparent;color:var(--ink);font-family:var(--cond);font-weight:700;font-size:18px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.btn:focus-visible,.seg button:focus-visible,.chip:focus-visible,input:focus-visible{outline:3px solid #2C6BD6;outline-offset:2px}
+.scrubrow{display:flex;align-items:center;gap:10px;margin-top:8px}
+.scrubrow label{font-size:14px;color:var(--muted);white-space:nowrap}
+input[type=range]{flex:1;accent-color:var(--burg);min-height:32px}
+.hint{font-size:14px;color:var(--muted);margin:8px 0 0}
+.pick h2{font-family:var(--cond);font-weight:800;font-size:26px;margin:0 0 6px}
+.pick section+section{margin-top:18px}
+.famrow{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:start;padding:6px 0;border-bottom:1px solid var(--line)}
+.fam{font-size:14px;font-weight:700;color:var(--muted);padding-top:9px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{min-height:38px;padding:0 12px;border-radius:7px;border:2px solid var(--c);background:transparent;color:var(--ink);font-family:var(--cond);font-weight:800;font-size:17px;letter-spacing:.3px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--c);color:#fff}
+#defpick{display:flex;gap:6px;flex-wrap:wrap}
+.jobs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:22px}
+@media (max-width:520px){.jobs{grid-template-columns:minmax(0,1fr)}}
+.jobs article{background:var(--panel);border-radius:12px;padding:14px 16px}
+.jobs h3{font-family:var(--cond);font-weight:800;font-size:22px;margin:0}
+.kind{margin:2px 0 10px;color:var(--muted);font-size:14px}
+dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px}
+dt{font-weight:700}dd{margin:0}
+.note{margin:10px 0 0;font-size:14px}
+footer{margin-top:28px;font-size:13px;color:var(--muted)}
+#pathhost{position:absolute;width:0;height:0;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Commanders Playbook</h1>
+  <p>Pick a play and a defense, then watch it unfold.</p>
+</header>
+<div class="layout">
+  <div class="stage">
+    <div class="fieldbox">
+      <svg id="field" viewBox="0 -80 600 370" role="img" aria-label="Animated play diagram">
+        <rect x="0" y="-80" width="600" height="370" fill="#3F7A47"></rect>
+        <rect x="0" y="-26" width="600" height="72" fill="#3A7242"></rect>
+        <rect x="0" y="118" width="600" height="72" fill="#3A7242"></rect>
+        <g stroke="#ffffff" stroke-opacity=".55" stroke-width="1.5">
+          <line x1="0" y1="118" x2="600" y2="118"></line><line x1="0" y1="46" x2="600" y2="46"></line><line x1="0" y1="-26" x2="600" y2="-26"></line>
+        </g>
+        <g fill="#ffffff" fill-opacity=".7" font-family="Barlow, sans-serif" font-size="12" font-weight="700">
+          <text x="10" y="112">5</text><text x="10" y="40">10</text><text x="10" y="-32">15 yds</text>
+        </g>
+        <line x1="0" y1="190" x2="600" y2="190" stroke="#8EC3FF" stroke-width="2.5"></line>
+        <circle cx="360" cy="132" r="6" fill="#4C8DFF" stroke="#fff" stroke-width="1.5"></circle>
+        <g id="routes"></g>
+        <g id="players"></g>
+      </svg>
+      <div class="count" id="count" aria-live="off">Ready</div>
+      <div class="banner" id="banner" aria-live="polite"></div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="play" type="button">Play</button>
+      <button class="btn ghost" id="slow" type="button" aria-pressed="false">Slow-mo</button>
+      <div class="seg" role="group" aria-label="Side">
+        <button id="sideR" type="button" aria-pressed="true">Right</button>
+        <button id="sideL" type="button" aria-pressed="false">Left</button>
+      </div>
+    </div>
+    <div class="scrubrow"><label for="scrub">Step through</label><input id="scrub" type="range" min="0" max="100" value="0"></div>
+    <p class="hint" id="besthint"></p>
+  </div>
+  <div class="pick">
+    <section><h2>Offense</h2><div id="offpick"></div></section>
+    <section><h2>Defense</h2><div id="defpick"></div></section>
+    <div class="jobs"><article id="offjobs"></article><article id="defjobs"></article></div>
+  </div>
+</div>
+<footer>White circles are us on offense; red squares are the defense. The blue dot is where the rusher starts. Defenders here follow simple rules, so treat the result as a picture of the play, not a prediction.</footer>
+</div>
+<svg id="pathhost" aria-hidden="true"></svg>
+<script>
+(function(){
+"use strict";
+var JOBS = {"DART|Trips Right Dart": {"name": "DART", "kind": "Pass · our base play", "call": "Trips Right Dart", "when": "start here; it’s our go-to", "jobs": [["QB", "Look Z, then X, then Center. Throw by “3.”"], ["Center", "Snap. 5 steps, turn around."], ["Runner", "Run to the sideline on your side."], ["X", "3 steps, turn around."], ["Y", "Run deep, fast."], ["Z", "5 steps, cut to the sideline."]], "note": null}, "SLANT|Trips Right Slant": {"name": "SLANT", "kind": "Pass · the slant", "call": "Trips Right Slant", "when": "they jump our Z receiver", "jobs": [["QB", "Look X first, then Center."], ["Center", "Same: 5 steps, turn around."], ["Runner", "Same: run to the sideline."], ["X", "3 steps, then slant across the middle."], ["Y", "Same: run deep."], ["Z", "Run deep instead."]], "note": null}, "CRISSCROSS|Trips Right Crisscross": {"name": "CRISSCROSS", "kind": "Pass · the mesh from Trips", "call": "Trips Right Crisscross", "when": "a defender follows one of our kids everywhere", "jobs": [["QB", "Throw to the first crosser who’s open, then Center."], ["Center", "Same: 5 steps, turn around."], ["Runner", "Go up 5 steps, then run across. Stay high."], ["X", "2 steps, then run across. Stay low."], ["Y", "Same: run deep."], ["Z", "Same: 5 steps, cut to the sideline."]], "note": "X always goes low. From Trips the Runner goes high. Pass close but don’t touch. Their defenders bump into each other."}, "CRISSCROSS|Twins Right Crisscross": {"name": "CRISSCROSS", "kind": "Pass · the mesh from Twins", "call": "Twins Right Crisscross", "when": "a defender follows one of our kids everywhere", "jobs": [["QB", "Throw to the first crosser who’s open, then Center."], ["Center", "Same: 5 steps, turn around."], ["Runner", "Same: run to the sideline."], ["X", "2 steps, then run across. Stay low."], ["Y", "5 steps, then run across. Stay high."], ["Z", "Same: 5 steps, cut to the sideline."]], "note": "X always goes low. From Twins the Y goes high: one crosser from each side."}, "BROOM|Trips Right Broom": {"name": "BROOM", "kind": "Run · the sweep", "call": "Trips Right Broom", "when": "they crowd our receivers’ side", "jobs": [["QB", "Hand it to the Runner."], ["Runner", "Take it and run around the outside, on your side."], ["Center", "Same: 5 steps, turn around."], ["X", "Run deep. Take your defender with you."], ["Y", "Same: run deep."], ["Z", "Run deep. Take your defender with you."]], "note": null}, "TUNNEL|Trips Right Tunnel": {"name": "TUNNEL", "kind": "Run · up the middle", "call": "Trips Right Tunnel", "when": "they race outside to stop Broom", "jobs": [["QB", "Hand it to the Runner."], ["Runner", "Take it and run straight up, right next to the Center."], ["Center", "Run straight deep. Take your defender away."], ["X", "Run deep. Take your defender with you."], ["Y", "Same: run deep."], ["Z", "Run deep. Take your defender with you."]], "note": null}, "ROCKET|Trips Right Rocket": {"name": "ROCKET", "kind": "Trick · fake run, throw deep", "call": "Trips Right Rocket", "when": "they rush to stop Broom", "jobs": [["QB", "Fake the handoff. Look X deep, then Y, then Center."], ["Runner", "Same as Broom, but fake it. Make them chase you!"], ["Center", "Same: 5 steps, turn around."], ["X", "Run deep. You’re the first look!"], ["Y", "8 steps, then cut to the sideline."], ["Z", "Same as Broom: run deep."]], "note": null}, "FLEA|Trips Right Flea": {"name": "FLEA", "kind": "Trick · the flea flicker", "call": "Trips Right Flea", "when": "their safeties creep up to stop the run", "jobs": [["QB", "Hand it off. Get it back. Look X deep, then Y."], ["Runner", "Take it, 2 steps, then pitch it back to the QB."], ["Center", "Same: 5 steps, turn around."], ["X", "Run deep. You’re the first look!"], ["Y", "8 steps, then cut to the sideline."], ["Z", "Same as Broom: run deep."]], "note": null}, "BOOMERANG|Twins Right Boomerang": {"name": "BOOMERANG", "kind": "Trick · the reverse (Twins only)", "call": "Twins Right Boomerang", "when": "they chase Broom hard", "jobs": [["QB", "Same as Broom: hand it to the Runner."], ["Runner", "Start the sweep, then hand it to X."], ["X", "Run back behind the Runner. Take it. Go the other way!"], ["Center", "Same: 5 steps, turn around."], ["Y", "Same: run deep."], ["Z", "Same: run deep."]], "note": "Twins only: X has to start on the Runner’s side."}, "WALL|Wall": {"name": "WALL", "kind": "Defense · our base", "call": "Wall", "when": "most plays", "jobs": [["Safety 1", "Follow their best player everywhere."], ["Safety 2", "Stay deep in the middle. Nobody behind you."], ["Edges", "Nobody gets outside you."], ["Center Spy", "Cover their center. He can catch it."], ["Rusher", "Start on the blue dot. Count to 4 out loud, then go, arms up."], ["Everyone", "Eyes on the belt. Pull the flag."]], "note": null}, "ZONE|Zone": {"name": "ZONE", "kind": "Defense · everyone guards an area", "call": "Zone", "when": "they throw deep, or have lots of good receivers", "jobs": [["Safety 1", "Guard the deep left. Nobody behind you."], ["Safety 2", "Guard the deep right. Nobody behind you."], ["Edges", "Same: nobody outside. Guard the short area on your side."], ["Center Spy", "Guard the short middle."], ["Rusher", "Same: count to 4, then go."], ["Everyone", "Watch your area. Take whoever comes into it."]], "note": null}, "MAN|Man": {"name": "MAN", "kind": "Defense · everyone follows a kid", "call": "Man", "when": "they throw quick and short, or one or two kids do everything", "jobs": [["Safety 1", "Same: follow their best player."], ["Safety 2", "Follow their fastest other receiver."], ["Edges", "Pick the kid in front of you. Follow him everywhere."], ["Center Spy", "Same: follow their center."], ["Rusher", "Same: count to 4, then go."], ["Everyone", "Point at your kid before the snap."]], "note": "Nobody is deep in Man. If your kid gets past you, run!"}, "DOUBLE|Double": {"name": "DOUBLE", "kind": "Defense · surprise", "call": "Double", "when": "their best player keeps beating us, or on a big down", "jobs": [["Safety 1", "Stay in front of their best player."], ["Safety 2", "Get BEHIND their best player."], ["Edges", "Same: nobody gets outside you."], ["Center Spy", "Same: cover their center."], ["Rusher", "Same: count to 4, then go."], ["Everyone", "Eyes on the belt. Pull the flag."]], "note": null}, "TRAP|Trap": {"name": "TRAP", "kind": "Defense · surprise", "call": "Trap", "when": "they keep throwing short, or need just a few yards", "jobs": [["Edges", "Stop at 5 yards. Jump the short throw!"], ["Safety 2", "Stay deep. You’re the last one back."], ["Safety 1", "Same: follow their best player."], ["Center Spy", "Same: cover their center."], ["Rusher", "Same: count to 4, then go."], ["Everyone", "Eyes on the belt. Pull the flag."]], "note": null}, "JAVELIN|Twins Right Javelin": {"name": "JAVELIN", "kind": "Pass · Dart, but deep", "call": "Twins Right Javelin", "when": "we need a lot of yards", "jobs": [["QB", "Look Z, then Y, then Center. Throw by “3.”"], ["Center", "Same: 5 steps, turn around."], ["Runner", "Same: run to the sideline."], ["X", "Run deep, fast."], ["Y", "15 steps, then cut in toward the middle."], ["Z", "10 steps, then cut to the sideline."]], "note": "Same shape as Dart, everyone just goes farther. Deep guys not open by “2”? Throw to the Center."}, "SWITCHEROO|Trips Right Switcheroo": {"name": "SWITCHEROO", "kind": "Pass · swap lanes", "call": "Trips Right Switcheroo", "when": "they play man and follow our kids", "jobs": [["QB", "Look Z deep, then Y, then Runner."], ["Center", "Same: 5 steps, turn around."], ["Runner", "Run across, just past the line."], ["X", "Run to the sideline, then deep."], ["Y", "10 steps, then cut in."], ["Z", "Run deep, across the field."]], "note": "Z and X swap. X goes underneath. Their defenders get tangled."}, "FLY GUY|Twins Right Fly Guy": {"name": "FLY GUY", "kind": "Pass · the deep cross", "call": "Twins Right Fly Guy", "when": "they guard the short stuff", "jobs": [["QB", "Look at the two crossers deep, then Z, then Center."], ["Center", "Same: 5 steps, turn around."], ["Runner", "2 steps up, then run deep to the far side."], ["X", "Run deep, then cut to the sideline."], ["Y", "Run deep toward the other side."], ["Z", "6 steps, then cut in across the middle."]], "note": "Runner and Y cross deep. Y crosses first, Runner goes behind him."}, "FAKEOUT|Deuce Right Fakeout": {"name": "FAKEOUT", "kind": "Trick · fake one back, give to the other", "call": "Deuce Right Fakeout", "when": "they chase whoever looks like he has it", "jobs": [["QB", "Fake it to X. Hand it to the Runner."], ["Runner", "Wait for the fake. Take it, run straight up your side."], ["X", "Pretend you have it! Run to the sideline fast."], ["Center", "Run straight deep. Take your defender away."], ["Y", "8 steps, then cut in."], ["Z", "Run deep, then cut in."]], "note": "Deuce only: we need two kids behind the QB. The best fake wins: X has to sell it."}};
+var FORM = {
+  T:  {C:[300,204],Q:[300,248],R:[236,248],X:[390,204],Y:[460,204],Z:[536,204]},
+  TW: {C:[300,204],Q:[300,248],R:[236,248],X:[84,204], Y:[460,204],Z:[536,204]},
+  DU: {C:[300,204],Q:[300,248],R:[236,248],X:[364,248],Y:[460,204],Z:[536,204]}
+};
+var FORMNAME = {T:"Trips", TW:"Twins", DU:"Deuce"};
+var R_ = {
+ O_out:"M536 188 L536 132 L584 132", O_go:"M536 188 L536 24", M_go:"M460 188 L460 24",
+ I_hitch:"M390 188 L390 156 L381 168", I_slant:"M390 188 L390 170 L252 102", I_go:"M390 188 L390 24",
+ C_hitch:"M300 188 L300 128 L291 140", R_flat:"M220 248 C 170 248 110 236 66 198",
+ R_sweep:"M220 250 C 150 254 84 232 74 172 L74 -60", I_mesh:"M390 188 L390 182 L60 182",
+ R_mesh:"M236 232 L236 160 L566 160", R_dive:"M236 232 L262 210 L262 -60", C_go:"M300 188 L300 24",
+ R_flat_tw:"M220 250 C 170 254 100 256 40 254", M_mid:"M460 188 L460 70 L584 70",
+ I_mesh_tw:"M84 188 L84 182 L566 182", M_mesh_tw:"M460 188 L460 160 L40 160"
+};
+// play definitions (Right side coordinates)
+var PLAYS = [
+ {key:"DART", fam:"Quick pass", color:"#1F5FAD", form:"T", job:"DART|Trips Right Dart",
+  r:{Z:R_.O_out,Y:R_.M_go,X:R_.I_hitch,C:R_.C_hitch,R:R_.R_flat}, ev:[{t:1.25,type:"throw",to:"Z"}]},
+ {key:"SLANT", fam:"Quick pass", color:"#B3261E", form:"T", job:"SLANT|Trips Right Slant",
+  r:{Z:R_.O_go,Y:R_.M_go,X:R_.I_slant,C:R_.C_hitch,R:R_.R_flat}, ev:[{t:1.0,type:"throw",to:"X"}]},
+ {key:"JAVELIN", fam:"Deep pass", color:"#A3195B", form:"TW", job:"JAVELIN|Twins Right Javelin",
+  r:{X:"M84 188 L84 22",Y:"M460 188 L460 40 L270 40",Z:"M536 188 L536 76 L586 76",C:R_.C_hitch,R:R_.R_flat_tw}, ev:[{t:1.8,type:"throw",to:"Z"}]},
+ {key:"SWITCHEROO", fam:"Deep pass", color:"#5B4636", form:"T", job:"SWITCHEROO|Trips Right Switcheroo",
+  r:{Z:"M536 188 L120 26",X:"M390 188 L560 116 L560 22",Y:"M460 188 L460 62 L330 62",R:"M236 232 L250 166 L400 166",C:R_.C_hitch}, ev:[{t:2.1,type:"throw",to:"Z"}]},
+ {key:"CRISSCROSS", label:"CRISSCROSS", fam:"Mesh", color:"#6A3FA0", form:"T", job:"CRISSCROSS|Trips Right Crisscross",
+  r:{Z:R_.O_out,Y:R_.M_go,X:R_.I_mesh,R:R_.R_mesh,C:R_.C_hitch}, ev:[{t:1.45,type:"throw",to:"X"}]},
+ {key:"CRISSCROSS_TW", label:"CRISSCROSS · TWINS", fam:"Mesh", color:"#6A3FA0", form:"TW", job:"CRISSCROSS|Twins Right Crisscross",
+  r:{Z:R_.O_out,X:R_.I_mesh_tw,Y:R_.M_mesh_tw,C:R_.C_hitch,R:R_.R_flat_tw}, ev:[{t:2.2,type:"throw",to:"X"}]},
+ {key:"FLY GUY", fam:"Mesh", color:"#4B2E83", form:"TW", job:"FLY GUY|Twins Right Fly Guy",
+  r:{X:"M84 188 L84 52 L40 52",R:"M236 232 L250 186 L500 26",Y:"M460 188 L200 26",Z:"M536 188 L536 100 L210 100",C:R_.C_hitch}, ev:[{t:2.3,type:"throw",to:"R"}]},
+ {key:"BROOM", fam:"Run", color:"#2E7D32", form:"T", job:"BROOM|Trips Right Broom",
+  r:{Z:R_.O_go,Y:R_.M_go,X:R_.I_go,C:R_.C_hitch,R:R_.R_sweep}, delay:{R:0.15}, ev:[{t:0.45,type:"hand",to:"R"}]},
+ {key:"TUNNEL", fam:"Run", color:"#B4470B", form:"T", job:"TUNNEL|Trips Right Tunnel",
+  r:{Z:R_.O_go,Y:R_.M_go,X:R_.I_go,C:R_.C_go,R:R_.R_dive}, delay:{R:0.1}, ev:[{t:0.4,type:"hand",to:"R"}]},
+ {key:"ROCKET", fam:"Trick", color:"#8A6500", form:"T", job:"ROCKET|Trips Right Rocket",
+  r:{Z:R_.O_go,Y:R_.M_mid,X:R_.I_go,C:R_.C_hitch,R:R_.R_sweep}, delay:{R:0.15},
+  ev:[{t:0.45,type:"fake",to:"R"},{t:2.25,type:"throw",to:"X"}]},
+ {key:"FLEA", fam:"Trick", color:"#0F6E6E", form:"T", job:"FLEA|Trips Right Flea",
+  r:{Z:R_.O_go,Y:R_.M_mid,X:R_.I_go,C:R_.C_hitch,R:"M236 248 L228 240 L196 222"}, delay:{R:0.2},
+  ev:[{t:0.45,type:"hand",to:"R"},{t:1.15,type:"pitch",to:"Q"},{t:2.5,type:"throw",to:"X"}]},
+ {key:"BOOMERANG", fam:"Trick", color:"#3A3A3A", form:"TW", job:"BOOMERANG|Twins Right Boomerang",
+  r:{Y:R_.M_go,Z:R_.O_go,C:R_.C_hitch,R:"M236 248 L228 250 C 200 252 176 252 150 252",X:"M84 204 L100 228 L150 254 L360 254 C 440 252 486 226 500 180 L512 -60"},
+  delay:{R:0.15}, ev:[{t:0.45,type:"hand",to:"R"},{t:1.3,type:"hand",to:"X"}]},
+ {key:"FAKEOUT", fam:"Trick", color:"#7C2D12", form:"DU", job:"FAKEOUT|Deuce Right Fakeout",
+  r:{X:"M364 248 L364 240 C 430 254 520 252 584 232",R:"M236 232 C 244 196 236 140 226 -60",C:R_.C_go,Y:"M460 188 L460 70 L360 70",Z:"M536 188 L536 30 L420 30"},
+  delay:{R:0.5}, ev:[{t:0.35,type:"fake",to:"X"},{t:0.6,type:"hand",to:"R"}]}
+];
+var DEFS = [
+ {key:"WALL", job:"WALL|Wall"},{key:"ZONE", job:"ZONE|Zone"},{key:"MAN", job:"MAN|Man"},
+ {key:"DOUBLE", job:"DOUBLE|Double"},{key:"TRAP", job:"TRAP|Trap"}
+];
+var OFF_IDS=["C","Q","R","X","Y","Z"];
+var SPEED=82, CARRY=88, DSPEED=74, PURSUE=82, RUSHSPD=88, BALL=300, DT=1/60, TMAX=7.5;
+
+var hostSvg=document.getElementById("pathhost");
+var pathCache={};
+function pathEl(d){
+  if(pathCache[d]) return pathCache[d];
+  var p=document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("d",d); hostSvg.appendChild(p);
+  var o={el:p,len:p.getTotalLength()}; pathCache[d]=o; return o;
+}
+function withStart(d,start){
+  var m=d.match(/^M\s*(-?[\d.]+)\s+(-?[\d.]+)/);
+  if(!m) return d;
+  var sx=+m[1], sy=+m[2];
+  if(Math.abs(sx-start[0])<1 && Math.abs(sy-start[1])<1) return d;
+  return "M"+start[0]+" "+start[1]+" L"+sx+" "+sy+d.slice(m[0].length);
+}
+function dist(a,b){var dx=a[0]-b[0],dy=a[1]-b[1];return Math.sqrt(dx*dx+dy*dy);}
+function toward(p,tgt,maxd){var d=dist(p,tgt); if(d<=maxd||d===0) return [tgt[0],tgt[1]]; return [p[0]+(tgt[0]-p[0])/d*maxd, p[1]+(tgt[1]-p[1])/d*maxd];}
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+
+function simulate(play, defKey, best){
+  var form=FORM[play.form];
+  var routes={};
+  OFF_IDS.forEach(function(id){
+    var d=play.r[id];
+    if(d){ var full=withStart(d,form[id]); var pe=pathEl(full); routes[id]={pe:pe,d:full,delay:(play.delay&&play.delay[id])||0}; }
+  });
+  function routePos(id,t){
+    var r=routes[id]; if(!r) return form[id].slice();
+    var s=Math.max(0,t-r.delay)*SPEED; if(s>r.pe.len) s=r.pe.len;
+    var pt=r.pe.el.getPointAtLength(s); return [pt.x,pt.y];
+  }
+  function routeDone(id,t){var r=routes[id]; if(!r) return true; return Math.max(0,t-r.delay)*SPEED>=r.pe.len;}
+  // defense setup
+  var receivers=["X","Y","Z","R","C"];
+  var second=["Z","Y","X"].filter(function(k){return k!==best;})[0];
+  var third=["X","Y","Z"].filter(function(k){return k!==best&&k!==second;})[0];
+  var bx=form[best][0];
+  var D=[];
+  function add(label,start,mode,arg){D.push({label:label,p:start.slice(),mode:mode,arg:arg||{}});}
+  var rush=[360,132];
+  if(defKey==="WALL"){
+    add("S1",[bx,140],"man",{id:best}); add("S2",[300,46],"deepMid");
+    add("E",[86,160],"edge",{side:"L"}); add("E",[514,160],"edge",{side:"R"});
+    add("SPY",[300,166],"man",{id:"C"}); add("RUSH",rush,"rush");
+  } else if(defKey==="ZONE"){
+    add("S1",[172,66],"deepHalf",{x0:20,x1:300,home:[172,66]}); add("S2",[428,66],"deepHalf",{x0:300,x1:580,home:[428,66]});
+    add("E",[113,156],"zone",{rect:[30,104,170,86],home:[113,156]}); add("E",[487,156],"zone",{rect:[400,104,170,86],home:[487,156]});
+    add("SPY",[280,160],"zone",{rect:[190,104,220,86],home:[280,160]}); add("RUSH",rush,"rush");
+  } else if(defKey==="MAN"){
+    add("S1",[bx,150],"man",{id:best}); add("S2",[form[second][0],140],"man",{id:second});
+    add("E",[form.R[0],174],"man",{id:"R"}); add("E",[form[third][0],160],"man",{id:third});
+    add("SPY",[300,166],"man",{id:"C"}); add("RUSH",rush,"rush");
+  } else if(defKey==="DOUBLE"){
+    add("S1",[bx,140],"under",{id:best}); add("S2",[bx,62],"over",{id:best});
+    add("E",[86,160],"edge",{side:"L"}); add("E",[514,160],"edge",{side:"R"});
+    add("SPY",[300,166],"man",{id:"C"}); add("RUSH",rush,"rush");
+  } else { // TRAP
+    add("S1",[bx,140],"man",{id:best}); add("S2",[300,46],"deepMid");
+    add("E",[86,120],"trap",{x0:30,x1:250,home:[86,120]}); add("E",[514,120],"trap",{x0:350,x1:570,home:[514,120]});
+    add("SPY",[300,166],"man",{id:"C"}); add("RUSH",rush,"rush");
+  }
+  var ev=play.ev.slice().sort(function(a,b){return a.t-b.t;});
+  var frames=[], notes=[];
+  var off={}; OFF_IDS.forEach(function(id){off[id]=form[id].slice();});
+  var free={}; // id -> true when running free
+  var holder=null, flight={from:form.C.slice(),to:"Q",t0:0,t1:0.22,kind:"snap"};
+  var reactAt=Infinity, fakeUntil=-1, fakeId=null, evi=0, result=null, carrierSince=0, lastCarrier=null, throwInfo=null;
+  var prevOff=null, prevHolder=null, lastHeld=null, changeT=-9;
+  function curHolderPos(){ return holder?off[holder]:null; }
+  for(var step=0; step<=TMAX/DT; step++){
+    var t=step*DT;
+    // events
+    while(evi<ev.length && t>=ev[evi].t && !result){
+      var e=ev[evi++];
+      if(e.type==="fake"){ fakeId=e.to; fakeUntil=t+0.8; notes.push({t:t,text:"Fake!"}); continue; }
+      if(!holder) continue;
+      var fromP=off[holder].slice();
+      if(e.type==="throw"){
+        // predict catch point
+        var tt=t, tgt=routePos(e.to,t);
+        for(var k=0;k<4;k++){ var ft=dist(fromP,tgt)/BALL; tgt=routePos(e.to,t+ft); tt=t+ft; }
+        flight={from:fromP,to:e.to,t0:t,t1:tt,kind:"throw",at:tgt}; throwInfo={from:fromP,at:tgt};
+        notes.push({t:t,text:"Throw"}); reactAt=Math.min(reactAt,t+0.2);
+      } else {
+        var dur=e.type==="pitch"?0.3:0.14;
+        flight={from:fromP,to:e.to,t0:t,t1:t+dur,kind:e.type};
+        notes.push({t:t,text:e.type==="pitch"?"Pitch back":"Handoff"});
+        if(e.to!=="Q") reactAt=Math.min(reactAt,(fakeUntil>t?fakeUntil:t)+0.5);
+      }
+      holder=null;
+    }
+    // ball arrival
+    var ballPos;
+    if(flight){
+      if(t>=flight.t1){
+        if(holder!==flight.to){ prevHolder=lastHeld; changeT=t; }
+        holder=flight.to; lastHeld=holder;
+        if(flight.kind==="throw"){ free[holder]=true; notes.push({t:t,text:"Catch"}); }
+        flight=null; carrierSince=t;
+      }
+    }
+    // offense movement
+    var nearestDef=function(p){var best=null,bd=1e9;D.forEach(function(d){var dd=dist(d.p,p); if(dd<bd){bd=dd;best=d;}});return {d:best,dist:bd};};
+    OFF_IDS.forEach(function(id){
+      if(result) return;
+      if(holder===id && id!=="Q" && (free[id]||routeDone(id,t))){
+        free[id]=true;
+        var p=off[id], nd=nearestDef(p), vx=0, vy=-1;
+        if(nd.d && nd.dist<80){ var away=p[0]-nd.d.p[0]; vx=clamp(away/40,-1.2,1.2); if(nd.d.p[1]<p[1]-4) vy=-0.55; }
+        var m=Math.sqrt(vx*vx+vy*vy); var np=[p[0]+vx/m*CARRY*DT, p[1]+vy/m*CARRY*DT];
+        np[0]=clamp(np[0],14,586); off[id]=np;
+      } else if(!free[id]) {
+        off[id]=routePos(id,t);
+      }
+    });
+    // defense
+    var carrier=holder, cpos=holder?off[holder]:((flight&&flight.kind!=="throw"&&lastHeld)?off[lastHeld]:null);
+    var pursuing = t>=reactAt;
+    D.forEach(function(d){
+      var tgt=d.p, spd=DSPEED;
+      if(result){ return; }
+      if(d.mode==="rush"){
+        if(t>=4){ spd=RUSHSPD; if(flight&&flight.kind==="throw") tgt=flight.at; else if(cpos) tgt=cpos; else tgt=off.Q; }
+        else tgt=d.p;
+      } else if(pursuing && (cpos||flight) && !((d.mode==="deepMid"||d.mode==="deepHalf"||d.mode==="over") && !(flight&&flight.kind==="throw") && !(cpos&&cpos[1]<165&&holder!=="Q"))){
+        spd=PURSUE;
+        var chase = (prevHolder && prevHolder!=="Q" && t-changeT<0.55) ? off[prevHolder] : cpos;
+        if(flight&&flight.kind==="throw") tgt=flight.at;
+        else if(flight && prevHolder===null && lastHeld && lastHeld!=="Q") tgt=off[lastHeld];
+        else if(chase){ var lead=dist(d.p,chase)<45?0:CARRY*0.3; tgt=[chase[0],chase[1]-lead]; }
+      } else {
+        var lagT=Math.max(0,t-0.25);
+        var bite = (fakeId && t<fakeUntil) ? off[fakeId] : null;
+        if(d.mode==="man"){ var tp=(free[d.arg.id]||d.arg.id==="Q")?off[d.arg.id]:routePos(d.arg.id,lagT); tgt=[tp[0],tp[1]-14]; }
+        else if(d.mode==="under"){ var tp2=routePos(d.arg.id,lagT); tgt=[tp2[0],tp2[1]+16]; }
+        else if(d.mode==="over"){ var tp3=routePos(d.arg.id,lagT); tgt=[tp3[0],Math.min(tp3[1]-40,62)]; }
+        else if(d.mode==="deepMid"||d.mode==="deepHalf"){
+          var x0=d.mode==="deepMid"?0:d.arg.x0, x1=d.mode==="deepMid"?600:d.arg.x1, home=d.mode==="deepMid"?[300,46]:d.arg.home;
+          var deep=null; receivers.forEach(function(id){var p=off[id]; if(p[0]>=x0&&p[0]<=x1&&p[1]<170&&(!deep||p[1]<off[deep][1])) deep=id;});
+          if(deep){ var dp=off[deep]; tgt=[clamp(dp[0], d.mode==="deepMid"?140:x0+30, d.mode==="deepMid"?460:x1-30), Math.min(home[1], dp[1]-34)]; }
+          else tgt=home;
+          if(bite && d.mode==="deepMid") tgt=[ (tgt[0]*2+bite[0])/3, tgt[1]+10];
+        }
+        else if(d.mode==="zone"){
+          var rc=d.arg.rect, nb=null, nbd=1e9;
+          receivers.forEach(function(id){var p=off[id]; if(p[0]>=rc[0]-20&&p[0]<=rc[0]+rc[2]+20&&p[1]>=rc[1]-20&&p[1]<=rc[1]+rc[3]){var dd=dist(p,d.arg.home); if(dd<nbd){nbd=dd;nb=p;}}});
+          tgt = nb?[clamp(nb[0],rc[0],rc[0]+rc[2]),clamp(nb[1]-12,rc[1],rc[1]+rc[3])]:d.arg.home;
+        }
+        else if(d.mode==="edge"){
+          var L=d.arg.side==="L", out=null;
+          receivers.forEach(function(id){var p=off[id]; if((L?p[0]<300:p[0]>300)&&p[1]<200){ if(!out||(L?p[0]<off[out][0]:p[0]>off[out][0])) out=id; }});
+          var hx=L?86:514;
+          if(out){ var op=off[out]; tgt=[L?Math.min(op[0]-24,hx):Math.max(op[0]+24,hx), clamp(op[1]-22,80,165)]; }
+          else tgt=[hx,150];
+          if(bite){ tgt=[(tgt[0]+bite[0])/2,(tgt[1]+bite[1])/2]; }
+        }
+        else if(d.mode==="trap"){
+          var nb2=null,nbd2=1e9;
+          receivers.forEach(function(id){var p=off[id]; if(p[0]>=d.arg.x0&&p[0]<=d.arg.x1&&p[1]>90){var dd=Math.abs(p[0]-d.arg.home[0]); if(dd<nbd2){nbd2=dd;nb2=p;}}});
+          tgt=[nb2?clamp(nb2[0],d.arg.x0,d.arg.x1):d.arg.home[0],120];
+        }
+      }
+      if(d.mode!=="rush" && !(pursuing && (cpos||flight))) tgt=[tgt[0],Math.min(tgt[1],176)];
+      d.p=toward(d.p,tgt,spd*Math.min(1,0.25+t/0.8)*DT);
+    });
+    // flag check
+    if(!result && holder){
+      var cp=off[holder];
+      for(var i=0;i<D.length;i++){
+        if(dist(D[i].p,cp)<16 && (t-carrierSince)>0.08 && (holder!=="Q"||D[i].mode==="rush")){
+          var yds=Math.round((190-cp[1])/14.4);
+          result={t:t,type:"flag",at:cp.slice(),by:i,yds:yds};
+          notes.push({t:t,text: holder==="Q"?"Flag pulled on the QB":"Flag pulled"});
+          break;
+        }
+      }
+      if(!result && cp[1]< -64){ result={t:t,type:"td"}; notes.push({t:t,text:"Touchdown!"}); }
+    }
+    // ball pos
+    if(flight){
+      var u=clamp((t-flight.t0)/(flight.t1-flight.t0),0,1);
+      var tp4=flight.kind==="throw"?flight.at:off[flight.to];
+      ballPos=[flight.from[0]+(tp4[0]-flight.from[0])*u, flight.from[1]+(tp4[1]-flight.from[1])*u, flight.kind==="throw"?Math.sin(u*Math.PI):0];
+    } else if(holder){ var hp=off[holder]; ballPos=[hp[0]+9,hp[1]-7,0]; }
+    frames.push({t:t,off:JSON.parse(JSON.stringify(off)),def:D.map(function(d){return d.p.slice();}),ball:ballPos,holder:holder});
+    if(result && t>result.t+0.9) break;
+  }
+  return {frames:frames,notes:notes,defs:D.map(function(d){return d.label;}),routes:routes,result:result,throwInfo:throwInfo};
+}
+
+// ---------- rendering ----------
+var NS="http://www.w3.org/2000/svg";
+var field=document.getElementById("field");
+var layerRoutes=document.getElementById("routes"), layerPlayers=document.getElementById("players");
+var bannerEl=document.getElementById("banner"), countEl=document.getElementById("count");
+var scrub=document.getElementById("scrub"), playBtn=document.getElementById("play"), slowBtn=document.getElementById("slow");
+var sideBtns=[document.getElementById("sideR"),document.getElementById("sideL")];
+var bestHint=document.getElementById("besthint");
+var state={play:PLAYS[0],def:"WALL",best:"Y",mirror:false,slow:false,idx:0,running:false,sim:null};
+function mx(x){return state.mirror?600-x:x;}
+function el(tag,attrs,parent){var e=document.createElementNS(NS,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e;}
+var nodes={};
+function buildScene(){
+  layerRoutes.innerHTML=""; layerPlayers.innerHTML="";
+  var g=el("g",{transform:state.mirror?"matrix(-1 0 0 1 600 0)":""},layerRoutes);
+  Object.keys(state.sim.routes).forEach(function(id){
+    el("path",{d:state.sim.routes[id].d,fill:"none",stroke:"#ffffff","stroke-opacity":"0.5","stroke-width":"2.5","stroke-dasharray":"6 6","stroke-linecap":"round"},g);
+  });
+  nodes.throwLine=el("path",{d:"",fill:"none",stroke:"#FFD86B","stroke-width":"2.5","stroke-dasharray":"2 6","stroke-linecap":"round",opacity:"0"},layerRoutes);
+  nodes.off={}; nodes.def=[];
+  state.sim.defs.forEach(function(lbl,i){
+    var gg=el("g",{"class":"def"},layerPlayers);
+    var w=lbl.length>2?40:30;
+    el("rect",{x:-w/2,y:-11,width:w,height:22,rx:"5"},gg);
+    var tx=el("text",{y:"5","text-anchor":"middle"},gg); tx.textContent=lbl;
+    nodes.def.push(gg);
+  });
+  OFF_IDS.forEach(function(id){
+    var gg=el("g",{"class":"off"+(id===state.best?" best":""),"data-id":id},layerPlayers);
+    el("circle",{r:"14"},gg);
+    var tx=el("text",{y:"5","text-anchor":"middle"},gg); tx.textContent=id;
+    if(id!=="Q"){ gg.setAttribute("tabindex","0"); gg.setAttribute("role","button"); gg.setAttribute("aria-label","Mark "+id+" as their best player");
+      gg.addEventListener("click",function(){ setBest(id); });
+      gg.addEventListener("keydown",function(ev){ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); setBest(id);} }); }
+    nodes.off[id]=gg;
+  });
+  nodes.ball=el("g",{"class":"ball"},layerPlayers);
+  el("ellipse",{rx:"7",ry:"4.5"},nodes.ball);
+  el("line",{x1:"-3",y1:"0",x2:"3",y2:"0"},nodes.ball);
+  nodes.flag=el("g",{"class":"flag",opacity:"0"},layerPlayers);
+  el("path",{d:"M0 0 L0 -26 L16 -20 L0 -14"},nodes.flag);
+}
+function render(i){
+  var sim=state.sim, f=sim.frames[i]; state.idx=i; scrub.value=i;
+  OFF_IDS.forEach(function(id){ var p=f.off[id]; nodes.off[id].setAttribute("transform","translate("+mx(p[0]).toFixed(1)+" "+p[1].toFixed(1)+")"); });
+  f.def.forEach(function(p,k){ nodes.def[k].setAttribute("transform","translate("+mx(p[0]).toFixed(1)+" "+p[1].toFixed(1)+")"); });
+  if(f.ball){ var s=1+f.ball[2]*0.6; nodes.ball.setAttribute("transform","translate("+mx(f.ball[0]).toFixed(1)+" "+(f.ball[1]-f.ball[2]*18).toFixed(1)+") scale("+s.toFixed(2)+")"); nodes.ball.setAttribute("opacity","1"); }
+  else nodes.ball.setAttribute("opacity","0");
+  var ti=sim.throwInfo;
+  if(ti && sim.notes.some(function(n){return n.text==="Throw"&&n.t<=f.t;})){
+    nodes.throwLine.setAttribute("d","M"+mx(ti.from[0])+" "+ti.from[1]+" L"+mx(ti.at[0])+" "+ti.at[1]); nodes.throwLine.setAttribute("opacity","0.9");
+  } else nodes.throwLine.setAttribute("opacity","0");
+  var r=sim.result;
+  if(r && r.type==="flag" && f.t>=r.t){ nodes.flag.setAttribute("transform","translate("+mx(r.at[0])+" "+(r.at[1]-6)+")"); nodes.flag.setAttribute("opacity","1"); }
+  else nodes.flag.setAttribute("opacity","0");
+  // count
+  var secs=Math.floor(f.t)+1;
+  if(f.t<0.05){ countEl.textContent="Ready"; countEl.className="count"; }
+  else if(f.t<4){ countEl.textContent=secs+" Mississippi"; countEl.className="count"; }
+  else { countEl.textContent="Rush!"; countEl.className="count hot"; }
+  var last=null; sim.notes.forEach(function(n){ if(n.t<=f.t) last=n; });
+  bannerEl.textContent=last?last.text:FORMNAME[state.play.form]+" "+(state.mirror?"Left":"Right")+" "+labelOf(state.play);
+}
+function labelOf(p){ return (p.label||p.key).replace(" · TWINS","").replace(/\b\w+/g,function(w){return w.charAt(0)+w.slice(1).toLowerCase();}); }
+function resim(keepIdx){
+  stop();
+  state.sim=simulate(state.play,state.def,state.best);
+  scrub.max=state.sim.frames.length-1;
+  buildScene(); render(keepIdx?Math.min(state.idx,state.sim.frames.length-1):0);
+  updatePanel();
+}
+var raf=null, lastTs=null, playT=0;
+function loop(ts){
+  if(!state.running) return;
+  if(lastTs===null) lastTs=ts;
+  playT+=(ts-lastTs)/1000*(state.slow?0.4:1); lastTs=ts;
+  var i=Math.min(state.sim.frames.length-1, Math.round(playT/DT));
+  render(i);
+  if(i>=state.sim.frames.length-1){ stop(true); return; }
+  raf=requestAnimationFrame(loop);
+}
+function start(){ if(state.idx>=state.sim.frames.length-1){ state.idx=0; } playT=state.idx*DT; lastTs=null; state.running=true; playBtn.textContent="Pause"; raf=requestAnimationFrame(loop); }
+function stop(ended){ state.running=false; if(raf) cancelAnimationFrame(raf); raf=null; playBtn.textContent= ended?"Replay":"Play"; }
+playBtn.addEventListener("click",function(){ if(state.running) stop(); else start(); });
+slowBtn.addEventListener("click",function(){ state.slow=!state.slow; slowBtn.setAttribute("aria-pressed",String(state.slow)); });
+scrub.addEventListener("input",function(){ stop(); render(+scrub.value); });
+sideBtns.forEach(function(b,k){ b.addEventListener("click",function(){ state.mirror=(k===1); sideBtns.forEach(function(x,j){x.setAttribute("aria-pressed",String(j===k));}); buildScene(); render(state.idx); updatePanel(); }); });
+function setBest(id){ state.best=id; resim(false); }
+
+// pickers
+function chip(text,color,pressed,onClick){
+  var b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=text;
+  b.style.setProperty("--c",color); b.setAttribute("aria-pressed",String(pressed)); b.addEventListener("click",onClick); return b;
+}
+function buildPickers(){
+  var op=document.getElementById("offpick"); op.innerHTML="";
+  var fams=[];
+  PLAYS.forEach(function(p){ if(fams.indexOf(p.fam)<0) fams.push(p.fam); });
+  fams.forEach(function(f){
+    var row=document.createElement("div"); row.className="famrow";
+    var lab=document.createElement("span"); lab.className="fam"; lab.textContent=f; row.appendChild(lab);
+    var wrap=document.createElement("div"); wrap.className="chips";
+    PLAYS.filter(function(p){return p.fam===f;}).forEach(function(p){
+      wrap.appendChild(chip(p.label||p.key,p.color,p===state.play,function(){ state.play=p; buildPickers(); resim(false); autoplay(); }));
+    });
+    row.appendChild(wrap); op.appendChild(row);
+  });
+  var dp=document.getElementById("defpick"); dp.innerHTML="";
+  DEFS.forEach(function(d){ dp.appendChild(chip(d.key,"var(--burg)",d.key===state.def,function(){ state.def=d.key; buildPickers(); resim(false); autoplay(); })); });
+}
+function fill(boxId,data,callText){
+  var box=document.getElementById(boxId); box.innerHTML="";
+  var h=document.createElement("h3"); h.textContent=callText; box.appendChild(h);
+  var k=document.createElement("p"); k.className="kind"; k.textContent=data.kind+". When: "+data.when+"."; box.appendChild(k);
+  var dl=document.createElement("dl");
+  data.jobs.forEach(function(j){ var dt=document.createElement("dt"); dt.textContent=j[0]; var dd=document.createElement("dd"); dd.textContent=j[1]; dl.appendChild(dt); dl.appendChild(dd); });
+  box.appendChild(dl);
+  if(data.note){ var n=document.createElement("p"); n.className="note"; n.textContent=data.note; box.appendChild(n); }
+}
+function updatePanel(){
+  var pj=JOBS[state.play.job];
+  var call=pj.call; if(state.mirror) call=call.replace("Right","Left");
+  fill("offjobs",pj,call);
+  var dj=JOBS[DEFS.filter(function(d){return d.key===state.def;})[0].job];
+  fill("defjobs",dj,dj.call);
+  bestHint.textContent="Their best player is "+state.best+". Tap another receiver on the field to change who the defense keys on.";
+}
+function autoplay(){ if(!rm) setTimeout(start,250); }
+var rm=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+buildPickers(); resim(false);
+if(!rm) setTimeout(start,500);
+})();
+
+</script>
+</body>
+</html>
