@@ -100,6 +100,14 @@
          border:2px solid var(--line); background:var(--panel2); color:var(--muted);
          font:700 12.5px 'Barlow',sans-serif; letter-spacing:.02em;}
   .qbtog.on{border-color:var(--link); color:var(--link); background:rgba(91,155,213,.16);}
+  .clockrow{display:flex; align-items:center; gap:10px;}
+  .clockrow b{font:700 42px 'Barlow Condensed',sans-serif; line-height:1; flex:1;
+              font-variant-numeric:tabular-nums;}
+  .clockrow button{flex:none; min-width:84px; height:44px; border-radius:11px; cursor:pointer;
+                   border:2px solid var(--line); background:var(--panel2); color:var(--text);
+                   font:600 15px 'Barlow',sans-serif;}
+  .clockrow button.ghost{min-width:64px; color:var(--muted);}
+  .clockrow b.low{color:var(--warn);}
   .qbnow{flex:none; border:1px solid var(--link); border-radius:9px; background:rgba(91,155,213,.16);
          color:var(--link); font:700 13px 'Barlow',sans-serif; padding:5px 8px; cursor:pointer;
          letter-spacing:.03em;}
@@ -322,6 +330,10 @@
           <p>Count in<em>Possessions keep kids from swapping mid&#8209;drive</em></p>
           <div class="seg"><button id="btnTrigPlay2">Plays</button><button id="btnTrigPoss2">Possessions</button></div>
         </div>
+        <div class="set">
+          <p>We start on<em>Which side of the ball takes the first snap</em></p>
+          <div class="seg"><button id="btnStartOff">Offense</button><button id="btnStartDef">Defense</button></div>
+        </div>
         <p class="hint" id="wizSummary"></p>
         <button class="big go" id="btnStart">Start the game</button>
         <button class="big outline" id="btnBack2">Back</button>
@@ -348,6 +360,17 @@
         <button class="big fill" id="btnSub" style="margin-top:12px">Make these subs</button>
         <div id="subExtra"></div>
         <p class="hint">Tap players to change the swap. Match the same number in and out.</p>
+      </div>
+
+      <div class="card">
+        <h2>Clock <em id="halfLabel"></em></h2>
+        <div class="clockrow">
+          <b id="clockTime">25:00</b>
+          <button id="btnClock">Start</button>
+          <button id="btnClockReset" class="ghost">Reset</button>
+        </div>
+        <button class="big outline" id="btnHalf2" style="margin-top:10px">Start the second half</button>
+        <p class="hint" id="clockHint"></p>
       </div>
 
       <div class="card">
@@ -523,10 +546,11 @@
       <button id="btnTurn">Possession<small id="turnSub"></small></button>
       <button id="btnUndo">Undo<small id="undoSub">nothing yet</small></button>
     </div>
-    <div class="grid3 hide" id="patRow">
+    <div class="grid2 hide" id="patRow">
       <button class="pat" id="btnPat1">Extra point<small>+1</small></button>
       <button class="pat" id="btnPat2">Two points<small>+2</small></button>
       <button id="btnPat0">No good<small>+0</small></button>
+      <button id="btnUndoPat">Undo<small id="undoPatSub">take back the TD</small></button>
     </div>
     <div class="grid2 hide" id="fourthRow">
       <button class="pat" id="btn4First">First down<small>drive continues</small></button>
@@ -541,6 +565,7 @@
 var S = {
   team: '', roster: [], present: [], field: [], stats: {}, entry: {}, exit: {}, qbs: {}, qbNow: null, tick: 0,
   starters: [], started: null, live: false,
+  startSide: 'offense', half: 1, halfLen: 25, clock: null,
   fieldSize: 6, subSize: 3, interval: 4, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
   weeks: 8, slot: 1, pin: ''
@@ -860,12 +885,48 @@ function pat(points){
   blink(); render(); save();
 }
 
+/* ---------- clock and halves ---------- */
+// Rough game clock: a running half plus whatever was banked before the last pause.
+// Stored as wall-clock marks so it keeps counting if the phone sleeps.
+function newClock(){ return {run:false, at:0, acc:0, len:(S.halfLen||25)*60000}; }
+function clockMs(){
+  var c = S.clock; if (!c) return 0;
+  return c.acc + (c.run && c.at ? Date.now() - c.at : 0);
+}
+function clockLeft(){
+  var c = S.clock; if (!c) return 0;
+  return Math.max(0, (c.len || 1500000) - clockMs());
+}
+function clockText(){
+  var ms = clockLeft(), m = Math.floor(ms/60000), ss = Math.floor((ms%60000)/1000);
+  return m + ':' + (ss < 10 ? '0' : '') + ss;
+}
+function toggleClock(){
+  if (!S.clock) S.clock = newClock();
+  var c = S.clock;
+  if (c.run){ c.acc = clockMs(); c.run = false; c.at = 0; }
+  else { c.run = true; c.at = Date.now(); }
+  save(); render();
+}
+function startSecondHalf(){
+  snapshot('undo second half');
+  S.half = 2;
+  S.clock = newClock();
+  S.since = 0;
+  // Second half is where playing time gets evened out, so lead with catch-up.
+  S.rotation = 'catchup';
+  pending = { inL: [], outL: [], auto: true };
+  render(); save();
+}
+
 /* ---------- game lifecycle ---------- */
 function startGame(){
   snapshot('undo start');
   S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false;
-  S.mode = 'offense'; S.started = new Date().toISOString(); S.live = true;
+  S.mode = S.startSide === 'defense' ? 'defense' : 'offense';
+  S.half = 1; S.clock = newClock();
+  S.started = new Date().toISOString(); S.live = true;
   S.present.forEach(function(n){ S.stats[n] = {off:0, def:0}; });
   undoStack = [];
   pending = { inL: [], outL: [], auto: true };
@@ -1183,7 +1244,9 @@ function render(){
     $('wTrigLabel').firstChild.nodeValue = S.trigger === 'plays' ? 'Swap every … plays' : 'Swap every … possessions';
     $('wTrigSub').textContent = S.trigger === 'plays' ? 'Counts every snap you log'
       : 'Change of possession is the natural break';
-    $('btnTrigPlay2').classList.toggle('on', S.trigger === 'plays');
+    $('btnStartOff').classList.toggle('on', S.startSide !== 'defense');
+  $('btnStartDef').classList.toggle('on', S.startSide === 'defense');
+  $('btnTrigPlay2').classList.toggle('on', S.trigger === 'plays');
     $('btnTrigPoss2').classList.toggle('on', S.trigger === 'possessions');
     var benchSize = S.present.length - S.fieldSize;
     var uWord = S.trigger === 'plays' ? 'plays' : 'possessions';
@@ -1209,7 +1272,8 @@ function render(){
   $('downNum').textContent = ORD[S.down-1];
   var left = S.interval - S.since;
   var unit = S.trigger === 'plays' ? 'play' : 'possession';
-  $('sideSub').textContent = S.pat ? 'extra point' : 'play ' + S.play;
+  $('sideSub').textContent = (S.pat ? 'extra point' : 'play ' + S.play) +
+    ' \u00b7 H' + (S.half || 1) + ' ' + clockText();
 
   var waiting = sList.filter(function(n){ return S.field.indexOf(n) < 0; });
   $('alertBox').innerHTML = sList.length
@@ -1267,6 +1331,15 @@ function render(){
     .map(function(n){ return chipHtml(n,'field'); }).join('') || '<p class="hint">Nobody on the field.</p>';
   $('benchChips').innerHTML = b.slice().sort(function(a,c){return a-c;})
     .map(function(n){ return chipHtml(n,'bench'); }).join('') || '<p class="hint">Bench is empty.</p>';
+  $('clockTime').textContent = clockText();
+  $('clockTime').classList.toggle('low', clockLeft() <= 5*60000);
+  $('btnClock').textContent = (S.clock && S.clock.run) ? 'Pause' : 'Start';
+  $('halfLabel').textContent = (S.half === 2 ? 'second half' : 'first half') +
+    ' \u00b7 ' + (S.halfLen || 25) + ' min';
+  $('btnHalf2').classList.toggle('hide', S.half === 2);
+  $('clockHint').textContent = S.half === 2
+    ? 'Second half. Subs are suggested by playing time now, so whoever played least goes in first.'
+    : 'Rough guide only \u2014 tap Start at kickoff. Starting the second half resets the clock and switches subs to catch-up.';
   var showQb = S.live && S.mode === 'offense';
   $('qbSection').classList.toggle('hide', !showQb);
   if (showQb){
@@ -1306,6 +1379,8 @@ function render(){
   $('turnSub').innerHTML = '&rarr; ' + (S.mode === 'offense' ? 'defense' : 'offense');
   $('turn4Sub').innerHTML = $('turnSub').innerHTML;
   $('btnUndo').disabled = !undoStack.length;
+  $('btnUndoPat').disabled = !undoStack.length;
+  $('undoPatSub').textContent = undoStack.length ? (lastAction || 'take back last tap') : 'nothing yet';
   $('undoSub').textContent = undoStack.length ? (lastAction || 'take back last tap') : 'nothing yet';
 
   /* team tab */
@@ -1533,6 +1608,7 @@ document.addEventListener('click', function(e){
   }
 
   switch(t.id){
+    case 'btnUndoPat': return undo();
     case 'btnQbNow': snapshot('undo QB change'); nextQb(); render(); save(); return;
     case 'btnSnap':  return runPlay('play');
     case 'btn4First': return runPlay('first');
@@ -1546,6 +1622,11 @@ document.addEventListener('click', function(e){
     case 'btnPat2':  return pat(2);
     case 'btnPat0':  return pat(0);
     case 'btnUndo':  return undo();
+    case 'btnStartOff': S.startSide = 'offense'; save(); return render();
+    case 'btnStartDef': S.startSide = 'defense'; save(); return render();
+    case 'btnHalf2':    return guard('to start the second half', startSecondHalf);
+    case 'btnClock':    return toggleClock();
+    case 'btnClockReset': snapshot('undo clock reset'); S.clock = newClock(); save(); return render();
     case 'btnStep1': if (!sel.start.length) sel.start = randomStart(); return goStep(2);
     case 'btnStep2': return goStep(3);
     case 'btnBack1': return goStep(1);
@@ -1679,6 +1760,7 @@ function resetEverything(){
   S = {
     team:'', roster:[], present:[], field:[], stats:{}, entry:{}, exit:{}, qbs:{}, qbNow:null, tick:0,
     starters:[], started:null, live:false,
+    startSide:'offense', half:1, halfLen:25, clock:null,
     fieldSize:6, subSize:3, interval:4, trigger:'plays', rotation:'sequence', gapLimit:6,
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
     weeks:8, slot:1, pin:''
@@ -1715,7 +1797,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v21';
+var APP_VERSION = 'v22';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
@@ -1747,6 +1829,19 @@ if ('serviceWorker' in navigator){
     });
   }).catch(function(){});
 }
+
+// Tick the two clock readouts without redrawing the whole screen.
+setInterval(function(){
+  if (!S.live || !S.clock || !S.clock.run) return;
+  var t = document.getElementById('clockTime');
+  if (t){
+    t.textContent = clockText();
+    t.classList.toggle('low', clockLeft() <= 5*60000);
+  }
+  var sub = document.getElementById('sideSub');
+  if (sub) sub.textContent = (S.pat ? 'extra point' : 'play ' + S.play) +
+    ' \u00b7 H' + (S.half || 1) + ' ' + clockText();
+}, 1000);
 
 var renderCore = render;
 render = function(){ var r = renderCore.apply(this, arguments); padForDock(); return r; };
