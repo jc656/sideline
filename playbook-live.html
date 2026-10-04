@@ -31,6 +31,9 @@ header p{margin:0;color:var(--muted);font-size:15px}
 @media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
 .stage{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:2;padding-bottom:8px}
 @media (max-width:860px){.stage{position:sticky;top:0;padding-top:4px;box-shadow:0 6px 10px -8px rgba(0,0,0,.35)} .hint{display:none} .scrubrow label{display:none} .scrubrow{margin-top:4px} .controls{gap:6px;margin-top:8px} .btn{font-size:18px;padding:0 12px;min-height:42px} .seg button{font-size:17px;padding:0 10px}}
+.nowplay{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+.nowplay b{font-family:var(--cond);font-weight:800;font-size:clamp(22px,4.4vw,30px);line-height:1.05;color:var(--burg)}
+.nowplay span{font-family:var(--cond);font-weight:700;font-size:clamp(15px,3vw,19px);color:var(--muted)}
 .fieldbox{position:relative;border-radius:12px;overflow:hidden;background:var(--turf)}
 svg#field{display:block;width:100%;height:auto}
 .count{position:absolute;left:12px;top:10px;font-family:var(--cond);font-weight:800;font-size:clamp(18px,3.4vw,26px);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
@@ -86,6 +89,10 @@ footer{margin-top:28px;font-size:13px;color:var(--muted)}
 </header>
 <div class="layout">
   <div class="stage">
+    <div class="nowplay">
+      <b id="nowOff">&nbsp;</b>
+      <span id="nowDef">&nbsp;</span>
+    </div>
     <div class="fieldbox">
       <svg id="field" viewBox="0 -80 600 370" role="img" aria-label="Animated play diagram">
         <rect x="0" y="-80" width="600" height="370" fill="#3F7A47"></rect>
@@ -499,6 +506,8 @@ function updatePanel(){
   fill("offjobs",pj,call);
   var dj=JOBS[DEFS.filter(function(d){return d.key===state.def;})[0].job];
   fill("defjobs",dj,dj.call);
+  document.getElementById("nowOff").textContent=call;
+  document.getElementById("nowDef").textContent="vs "+dj.call+" defense";
   bestHint.textContent="Their best player is "+state.best+". Tap another receiver on the field to change who the defense keys on.";
 }
 function autoplay(){ if(!rm) setTimeout(start,250); }
