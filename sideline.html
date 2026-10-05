@@ -814,6 +814,12 @@ function permute(a){
 function assignSpots(kids, spotsOpen, seasonOnly){
   var res = {};
   kids = kids.slice(); spotsOpen = spotsOpen.slice();
+  // Rotate the order spots are offered in; a fixed order plus the jersey-number
+  // tiebreak quietly parked low numbers at C and high numbers at Z.
+  if (spotsOpen.length > 1){
+    var r = (S.tick || 0) % spotsOpen.length;
+    spotsOpen = spotsOpen.slice(r).concat(spotsOpen.slice(0, r));
+  }
   if (spotsOpen.indexOf('Q') >= 0){
     var q = pickQbFor(kids);
     if (q != null){
@@ -2237,7 +2243,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v25';
+var APP_VERSION = 'v26';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
