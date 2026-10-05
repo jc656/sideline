@@ -622,6 +622,7 @@ var S = {
   starters: [], started: null, live: false,
   startSide: 'offense', half: 1, halfLen: 25, clock: null,
   spots: {}, posSnaps: {}, safeties: {S1:null, S2:null}, onDeck: null, qbTurnUsed: {},
+  qLast: null, qHeld: 0,
   posMode: 'least', sometimesTurns: 1, trackSafeties: true,
   fieldSize: 6, subSize: 3, interval: 4, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
@@ -855,17 +856,28 @@ function assignSpots(kids, spotsOpen, seasonOnly){
 }
 // A sometimes-QB keeps Q only for their one block. Once it is used up, Q goes
 // back to a main QB who is already on the field.
+var Q_MAX_BLOCKS = 2;
 function rebalanceQ(){
   var at = S.spots.Q;
-  if (at == null || !isSometimesQb(at)) return;
-  if (((S.qbTurnUsed||{})[at] || 0) < (S.sometimesTurns|0)) return;
-  var mains = S.field.filter(isMainQb);
-  if (!mains.length) return;
-  var take = mains.sort(function(a,c){
+  if (at == null) { S.qHeld = 0; return; }
+  if (at !== S.qLast){ S.qLast = at; S.qHeld = 1; }
+  else S.qHeld = (S.qHeld || 1) + 1;
+
+  var sometimesDone = isSometimesQb(at) &&
+    ((S.qbTurnUsed||{})[at] || 0) >= (S.sometimesTurns|0);
+  // A main QB hands Q on after two blocks so they get other spots too.
+  var mainStale = isMainQb(at) && S.qHeld > Q_MAX_BLOCKS;
+  if (!sometimesDone && !mainStale) return;
+
+  var others = S.field.filter(function(n){
+    return n !== at && (isMainQb(n) || (isSometimesQb(n) && !sometimesDone)); });
+  if (!others.length) return;
+  var take = others.sort(function(a,c){
     return gameSpot(a,'Q')-gameSpot(c,'Q') || seasonSpot(a,'Q')-seasonSpot(c,'Q') || a-c; })[0];
   var from = spotOf(take);
   S.spots.Q = take;
   if (from) S.spots[from] = at;
+  S.qLast = take; S.qHeld = 1;
 }
 function placeKids(kids, spotsOpen, seasonOnly){
   var res = assignSpots(kids, spotsOpen, seasonOnly);
@@ -1191,7 +1203,7 @@ function startGame(){
   snapshot('undo start');
   S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
   S.spots = {}; S.posSnaps = {}; S.safeties = {S1:null, S2:null};
-  S.onDeck = null; S.qbTurnUsed = {};
+  S.onDeck = null; S.qbTurnUsed = {}; S.qLast = null; S.qHeld = 0;
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false;
   S.mode = S.startSide === 'defense' ? 'defense' : 'offense';
   S.half = 1; S.clock = newClock();
@@ -1224,7 +1236,7 @@ function endGame(){
   // Team tab and the next game start from zero instead of last week's numbers.
   S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
   S.spots = {}; S.posSnaps = {}; S.safeties = {S1:null, S2:null};
-  S.onDeck = null; S.qbTurnUsed = {};
+  S.onDeck = null; S.qbTurnUsed = {}; S.qLast = null; S.qHeld = 0;
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0;
   S.field = []; S.starters = []; S.started = null;
   undoStack = [];
@@ -2206,6 +2218,7 @@ function resetEverything(){
     starters:[], started:null, live:false,
     startSide:'offense', half:1, halfLen:25, clock:null,
     spots:{}, posSnaps:{}, safeties:{S1:null,S2:null}, onDeck:null, qbTurnUsed:{},
+    qLast:null, qHeld:0,
     posMode:'least', sometimesTurns:1, trackSafeties:true,
     fieldSize:6, subSize:3, interval:4, trigger:'plays', rotation:'sequence', gapLimit:6,
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
@@ -2243,7 +2256,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v26';
+var APP_VERSION = 'v27';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
