@@ -100,6 +100,35 @@
          border:2px solid var(--line); background:var(--panel2); color:var(--muted);
          font:700 12.5px 'Barlow',sans-serif; letter-spacing:.02em;}
   .qbtog.on{border-color:var(--link); color:var(--link); background:rgba(91,155,213,.16);}
+  .qbtog.some{border-color:var(--muted); color:var(--text);}
+  .spotgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:7px;}
+  .spotgrid .spot{position:relative; border:2px solid #4A5D72; background:#28323E; border-radius:12px;
+                  min-height:62px; padding:4px 2px 3px; cursor:pointer; color:var(--text);
+                  display:flex; flex-direction:column; align-items:center; justify-content:center;}
+  .spotgrid .spot u{text-decoration:none; font:700 9.5px 'Barlow',sans-serif; color:var(--muted);
+                    letter-spacing:.07em; text-transform:uppercase;}
+  .spotgrid .spot b{font:700 23px 'Barlow Condensed',sans-serif; line-height:1;
+                    font-variant-numeric:tabular-nums;}
+  .spotgrid .spot i{font-style:normal; font:700 11px 'Barlow',sans-serif; color:var(--muted);
+                    text-transform:uppercase; letter-spacing:.03em;}
+  .spotgrid .spot.back{grid-column:span 2;}
+  .spotgrid .spot.empty{border-style:dashed; color:var(--muted);}
+  .spotgrid .spot.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
+  .spotgrid .spot.swout{border-color:var(--warn); background:rgba(255,107,74,.18);}
+  .spotgrid .spot.qbnowspot{border-color:var(--off);}
+  .deck{border:2px solid var(--ok); background:rgba(95,217,122,.12); border-radius:12px;
+        padding:9px 11px; margin-bottom:10px;}
+  .deck b{font:700 15px 'Barlow',sans-serif; color:var(--ok); display:block; margin-bottom:3px;}
+  .deck span{font:600 15px 'Barlow',sans-serif; color:var(--text); margin-right:12px;
+             display:inline-block;}
+  .posgrid{overflow-x:auto;}
+  .posgrid table{border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums;}
+  .posgrid th,.posgrid td{padding:5px 4px; text-align:center; font:600 13px 'Barlow',sans-serif;
+                          border-bottom:1px solid var(--line); white-space:nowrap;}
+  .posgrid th{color:var(--muted); font-size:11.5px; letter-spacing:.04em; text-transform:uppercase;}
+  .posgrid td.kid,.posgrid th.kid{text-align:left; font-weight:700;}
+  .posgrid td.zero{color:#3C4A5A;}
+  .posgrid td.tot{font-weight:700;}
   .clockrow{display:flex; align-items:center; gap:10px;}
   .clockrow b{font:700 42px 'Barlow Condensed',sans-serif; line-height:1; flex:1;
               font-variant-numeric:tabular-nums;}
@@ -349,8 +378,13 @@
           <div class="cmsg"><div class="ctitle" id="cTitle">Plays this rotation</div>
             <div class="csub" id="cSub"></div></div>
         </div>
+        <div id="deckStrip" class="hide"></div>
         <h2>On field <em id="fieldMeta"></em></h2>
-        <div class="chips field" id="fieldChips"></div>
+        <div class="spotgrid" id="spotGrid"></div>
+        <div id="safetyRow" class="hide">
+          <h2 style="margin:14px 0 9px">Safeties <em>tap a chip, then a kid</em></h2>
+          <div class="chips safety" id="safetyChips"></div>
+        </div>
         <div id="qbSection" class="hide">
           <h2 style="margin:14px 0 9px">QB <em id="qbRowMeta"></em></h2>
           <div class="chips qbpick" id="qbChips"></div>
@@ -398,6 +432,15 @@
         <span style="color:var(--def)">&#9646;</span> defense</p>
     </div>
     <div class="card">
+      <h2>Spots <em id="posMeta"></em></h2>
+      <div class="seg" style="margin-bottom:10px">
+        <button id="btnPosGame">This game</button><button id="btnPosSeason">Season</button>
+      </div>
+      <div class="posgrid" id="posGrid"></div>
+      <p class="hint" id="posHint"></p>
+    </div>
+
+    <div class="card">
       <h2>Who's here <em id="hereMeta"></em></h2>
       <div class="chips bench" id="attChips"></div>
       <p class="hint">Tap to check a kid in or out. Works mid-game &mdash; anyone who leaves the field is replaced right away, and a late arrival slots into the rotation at his number.</p>
@@ -435,6 +478,18 @@
       <div class="set">
         <p>Who goes in next<em id="rotSub"></em></p>
         <div class="seg"><button id="btnRotSeq">In order</button><button id="btnRotCatch">Catch-up</button></div>
+      </div>
+      <div class="set">
+        <p>Where subs line up<em>Least-played spot, or take the spot of the kid going out</em></p>
+        <div class="seg"><button id="btnPosLeast">Least-played</button><button id="btnPosSame">Same spot</button></div>
+      </div>
+      <div class="set">
+        <p>Sometimes-QB turns a game<em>One block at QB for each QB? kid</em></p>
+        <div class="step"><button data-s="sometimesTurns" data-d="-1">&minus;</button><b id="vSomeTurns"></b><button data-s="sometimesTurns" data-d="1">+</button></div>
+      </div>
+      <div class="set">
+        <p>Track safeties<em>S1 and S2 chips on defence</em></p>
+        <div class="seg"><button id="btnSafeOn">On</button><button id="btnSafeOff">Off</button></div>
       </div>
       <div class="set">
         <p>Flag a kid this far behind<em id="gapSub">Compared to whoever has played most</em></p>
@@ -566,13 +621,15 @@ var S = {
   team: '', roster: [], present: [], field: [], stats: {}, entry: {}, exit: {}, qbs: {}, qbNow: null, tick: 0,
   starters: [], started: null, live: false,
   startSide: 'offense', half: 1, halfLen: 25, clock: null,
+  spots: {}, posSnaps: {}, safeties: {S1:null, S2:null}, onDeck: null, qbTurnUsed: {},
+  posMode: 'least', sometimesTurns: 1, trackSafeties: true,
   fieldSize: 6, subSize: 3, interval: 4, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
   weeks: 8, slot: 1, pin: ''
 };
-var season = [], undoStack = [], lastAction = '', sel = {field:null, bench:null, start:[]};
+var season = [], undoStack = [], lastAction = '', sel = {field:null, bench:null, safety:null, start:[]};
 var pending = { inL: [], outL: [], auto: true };
-var LIM = { weeks:[1,20], subSize:[1,6], interval:[1,12], gapLimit:[2,20] };
+var LIM = { weeks:[1,20], subSize:[1,6], interval:[1,12], gapLimit:[2,20], sometimesTurns:[0,3] };
 var ORD = ['1st','2nd','3rd','4th'];
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -630,6 +687,24 @@ function load(){
     if (!S.present.length) S.present = S.roster.map(function(p){ return p.num; });
     S.present.forEach(function(n){ if(!S.stats[n]) S.stats[n] = {off:0, def:0}; });
     if (!S.field.length) S.field = randomStart();
+    // migration: legacy qb:true becomes 'main'; a field with no spots gets laid out
+    S.roster.forEach(function(p){ if (p.qb === true) p.qb = 'main'; });
+    if (!S.spots) S.spots = {};
+    if (!S.posSnaps) S.posSnaps = {};
+    if (!S.safeties) S.safeties = {S1:null, S2:null};
+    if (!S.qbTurnUsed) S.qbTurnUsed = {};
+    if (S.posMode == null) S.posMode = 'least';
+    if (S.sometimesTurns == null) S.sometimesTurns = 1;
+    if (S.trackSafeties == null) S.trackSafeties = true;
+    if (S.field.length && !spotsFilled().length){
+      var inOrder = S.field.slice().sort(function(a,c){ return a-c; });
+      var q = inOrder.filter(function(n){ return qbLevel(n); })[0];
+      if (q != null){ S.spots.Q = q; inOrder = inOrder.filter(function(n){ return n !== q; }); }
+      OFF_SPOTS.filter(function(k){ return S.spots[k] == null; }).forEach(function(k, i){
+        if (inOrder[i] != null) S.spots[k] = inOrder[i];
+      });
+    }
+    syncSpots();
     if (!S.slot || (!S.live && gameByNo(S.slot))) S.slot = nextOpenSlot();
     checkIncomingLink();
     render();
@@ -666,6 +741,157 @@ function isQb(n){
   return !!(p && p.qb);
 }
 function qbsPresent(){ return S.present.filter(isQb); }
+function qbLevel(n){
+  var p = S.roster.filter(function(r){ return r.num === n; })[0];
+  if (!p || !p.qb) return null;
+  return p.qb === true ? 'main' : p.qb;   // legacy true == main
+}
+function isMainQb(n){ return qbLevel(n) === 'main'; }
+function isSometimesQb(n){ return qbLevel(n) === 'sometimes'; }
+
+/* ---------- positions ---------- */
+var SPOTS = ['C','X','Y','Z','R','Q'];          // line row, then back row
+var OFF_SPOTS = ['C','Q','R','X','Y','Z'];
+var DEF_SPOTS = ['S1','S2'];
+var SPOT_NAME = {C:'Center', X:'Split end', Y:'Slot', Z:'Flanker', Q:'QB', R:'Runner',
+                 S1:'Safety 1', S2:'Safety 2'};
+function spotOf(n){
+  for (var k in S.spots) if (S.spots[k] === n) return k;
+  return null;
+}
+function spotsFilled(){ return OFF_SPOTS.filter(function(k){ return S.spots[k] != null; }); }
+function openSpots(){ return OFF_SPOTS.filter(function(k){ return S.spots[k] == null; }); }
+function posOf(n){
+  if (!S.posSnaps) S.posSnaps = {};
+  if (!S.posSnaps[n]){
+    S.posSnaps[n] = {};
+    OFF_SPOTS.concat(DEF_SPOTS).forEach(function(k){ S.posSnaps[n][k] = 0; });
+  }
+  return S.posSnaps[n];
+}
+function gameSpot(n, sp){ return posOf(n)[sp] || 0; }
+function seasonSpot(n, sp){
+  var t = 0;
+  season.forEach(function(g){
+    if (g.posSnaps && g.posSnaps[n]) t += g.posSnaps[n][sp] || 0;
+  });
+  return t;
+}
+function seasonDistinct(n){
+  var c = 0;
+  OFF_SPOTS.forEach(function(sp){ if (seasonSpot(n, sp) > 0) c++; });
+  return c;
+}
+// Who takes Q: a main QB first, then a sometimes QB who still has a turn left.
+function pickQbFor(cands){
+  // A sometimes-QB's one block is scheduled first, in the first half, whenever
+  // that kid is coming on anyway. Otherwise Q goes to a main QB.
+  if (S.half === 1 && (S.sometimesTurns|0) > 0){
+    var som = cands.filter(function(n){
+      return isSometimesQb(n) && ((S.qbTurnUsed||{})[n] || 0) < (S.sometimesTurns|0); });
+    if (som.length) return som.sort(function(a,c){
+      return gameSpot(a,'Q')-gameSpot(c,'Q') || seasonSpot(a,'Q')-seasonSpot(c,'Q') || a-c; })[0];
+  }
+  var mains = cands.filter(isMainQb);
+  if (mains.length){
+    return mains.sort(function(a,c){
+      return gameSpot(a,'Q')-gameSpot(c,'Q') || seasonSpot(a,'Q')-seasonSpot(c,'Q') || a-c; })[0];
+  }
+  var any = cands.filter(function(n){ return qbLevel(n); });
+  return any.length ? any.sort(function(a,c){ return gameSpot(a,'Q')-gameSpot(c,'Q') || a-c; })[0] : null;
+}
+function permute(a){
+  if (a.length <= 1) return [a.slice()];
+  var out = [];
+  a.forEach(function(v, i){
+    var rest = a.slice(0,i).concat(a.slice(i+1));
+    permute(rest).forEach(function(p){ out.push([v].concat(p)); });
+  });
+  return out;
+}
+// Least-played assignment: lowest total game snaps at the assigned spots, then
+// season snaps, then fewest distinct spots this season, then roster order.
+function assignSpots(kids, spotsOpen, seasonOnly){
+  var res = {};
+  kids = kids.slice(); spotsOpen = spotsOpen.slice();
+  if (spotsOpen.indexOf('Q') >= 0){
+    var q = pickQbFor(kids);
+    if (q != null){
+      res.Q = q;
+      kids = kids.filter(function(n){ return n !== q; });
+      spotsOpen = spotsOpen.filter(function(k){ return k !== 'Q'; });
+    }
+  }
+  var n = Math.min(kids.length, spotsOpen.length);
+  if (n){
+    var best = null, bestKey = null;
+    permute(kids.slice(0,n)).forEach(function(order){
+      var g=0, se=0, dis=0, ros=0;
+      for (var i=0;i<n;i++){
+        var kid = order[i], sp = spotsOpen[i];
+        g += seasonOnly ? 0 : gameSpot(kid, sp);
+        se += seasonSpot(kid, sp);
+        dis += seasonDistinct(kid);
+        ros += kid;
+      }
+      var key = [g, se, dis, ros];
+      if (!best || key[0]<bestKey[0] ||
+          (key[0]===bestKey[0] && (key[1]<bestKey[1] ||
+          (key[1]===bestKey[1] && (key[2]<bestKey[2] ||
+          (key[2]===bestKey[2] && key[3]<bestKey[3])))))){
+        best = order; bestKey = key;
+      }
+    });
+    for (var i=0;i<n;i++) res[spotsOpen[i]] = best[i];
+    kids = kids.slice(n);
+  }
+  return res;
+}
+// A sometimes-QB keeps Q only for their one block. Once it is used up, Q goes
+// back to a main QB who is already on the field.
+function rebalanceQ(){
+  var at = S.spots.Q;
+  if (at == null || !isSometimesQb(at)) return;
+  if (((S.qbTurnUsed||{})[at] || 0) < (S.sometimesTurns|0)) return;
+  var mains = S.field.filter(isMainQb);
+  if (!mains.length) return;
+  var take = mains.sort(function(a,c){
+    return gameSpot(a,'Q')-gameSpot(c,'Q') || seasonSpot(a,'Q')-seasonSpot(c,'Q') || a-c; })[0];
+  var from = spotOf(take);
+  S.spots.Q = take;
+  if (from) S.spots[from] = at;
+}
+function placeKids(kids, spotsOpen, seasonOnly){
+  var res = assignSpots(kids, spotsOpen, seasonOnly);
+  for (var sp in res){
+    S.spots[sp] = res[sp];
+    if (sp === 'Q' && isSometimesQb(res[sp])){
+      if (!S.qbTurnUsed) S.qbTurnUsed = {};
+      S.qbTurnUsed[res[sp]] = (S.qbTurnUsed[res[sp]] || 0) + 1;
+    }
+  }
+  syncSpots();
+  return res;
+}
+// S.field stays the list of kids on the field; S.spots says where each one lines up.
+function syncSpots(){
+  OFF_SPOTS.forEach(function(sp){
+    var n = S.spots[sp];
+    if (n != null && S.field.indexOf(n) < 0) S.spots[sp] = null;
+  });
+  var seen = {};
+  OFF_SPOTS.forEach(function(sp){
+    var n = S.spots[sp];
+    if (n == null) return;
+    if (seen[n]) S.spots[sp] = null; else seen[n] = true;
+  });
+  var loose = S.field.filter(function(n){ return !seen[n]; });
+  if (loose.length) placeKidsRaw(loose);
+}
+function placeKidsRaw(kids){
+  var res = assignSpots(kids, openSpots(), false);
+  for (var sp in res) S.spots[sp] = res[sp];
+}
 function qbSnaps(n){ return (S.qbs || {})[n] || 0; }
 // Fewest QB snaps first, then fewest total plays, then jersey order. Keeps the
 // armband moving instead of parking on one kid all game.
@@ -753,7 +979,9 @@ function setStarters(list){
   S.field = list.slice(0, S.fieldSize);
   S.starters = S.field.slice().sort(function(a,c){ return a-c; });
   S.entry = {}; S.exit = {}; S.tick = 0; assign(S.field);
-  S.since = 0; sel = {field:null, bench:null, start:[]};
+  S.spots = {};
+  placeKids(S.field.slice(), OFF_SPOTS.slice(), true);
+  S.since = 0; sel = {field:null, bench:null, safety:null, start:[]};
   render(); save();
 }
 
@@ -805,11 +1033,32 @@ function keepQb(inL, outL){
 function doSub(inL, outL){
   if (!inL.length || !outL.length) return;
   snapshot('undo subs');
+  var freed = outL.map(spotOf).filter(function(k){ return k; });
+  outL.forEach(function(n){ var k = spotOf(n); if (k) S.spots[k] = null; });
   S.field = S.field.filter(function(n){ return outL.indexOf(n) < 0; }).concat(inL);
   release(outL);
   assign(inL);
+  var locked = S.onDeck;
+  if (locked && locked.length === inL.length &&
+      locked.every(function(d){ return inL.indexOf(d.kid) >= 0 && freed.indexOf(d.spot) >= 0; })){
+    locked.forEach(function(d){
+      S.spots[d.spot] = d.kid;
+      if (d.spot === 'Q' && isSometimesQb(d.kid)){
+        if (!S.qbTurnUsed) S.qbTurnUsed = {};
+        S.qbTurnUsed[d.kid] = (S.qbTurnUsed[d.kid] || 0) + 1;
+      }
+    });
+    syncSpots();
+  } else if (S.posMode === 'same' && freed.length === inL.length){
+    inL.forEach(function(n, i){ S.spots[freed[i]] = n; });
+    syncSpots();
+  } else {
+    placeKids(inL.slice(), freed.length ? freed : openSpots(), false);
+  }
+  S.onDeck = null;
+  rebalanceQ();
   pickQb();
-  S.since = 0; sel = {field:null, bench:null, start:sel.start};
+  S.since = 0; sel = {field:null, bench:null, safety:null, start:sel.start};
   pending = { inL: [], outL: [], auto: true };
   blink(); render(); save();
 }
@@ -824,6 +1073,7 @@ function fillField(){
     if (S.rotation === 'catchup') pick = pool.slice().sort(function(a,c){ return total(a)-total(c) || a-c; })[0];
     else pick = waiting(pool)[0];
     S.field.push(pick); assign([pick]);
+    placeKidsRaw([pick]);
   }
   while (S.field.length > S.fieldSize){
     var drop = S.field.slice().sort(function(a,c){ return (S.entry[a]||0)-(S.entry[c]||0); })[0];
@@ -838,6 +1088,17 @@ function countPlay(){
     if (!S.stats[n]) S.stats[n] = {off:0, def:0};
     S.stats[n][S.mode === 'offense' ? 'off' : 'def']++;
   });
+  if (S.mode === 'offense'){
+    OFF_SPOTS.forEach(function(sp){
+      var n = S.spots[sp];
+      if (n != null && S.field.indexOf(n) >= 0) posOf(n)[sp]++;
+    });
+  } else if (S.trackSafeties !== false){
+    DEF_SPOTS.forEach(function(sp){
+      var n = (S.safeties || {})[sp];
+      if (n != null && S.field.indexOf(n) >= 0) posOf(n)[sp]++;
+    });
+  }
   if (S.mode === 'offense'){
     pickQb();
     if (S.qbNow != null){
@@ -923,6 +1184,8 @@ function startSecondHalf(){
 function startGame(){
   snapshot('undo start');
   S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
+  S.spots = {}; S.posSnaps = {}; S.safeties = {S1:null, S2:null};
+  S.onDeck = null; S.qbTurnUsed = {};
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false;
   S.mode = S.startSide === 'defense' ? 'defense' : 'offense';
   S.half = 1; S.clock = newClock();
@@ -943,6 +1206,7 @@ function endGame(){
       starters: S.starters.slice(),
       stats: JSON.parse(JSON.stringify(S.stats)),
       qbs: JSON.parse(JSON.stringify(S.qbs || {})),
+      posSnaps: JSON.parse(JSON.stringify(S.posSnaps || {})),
       names: S.roster.reduce(function(o,p){ o[p.num] = p.name; return o; }, {})
     });
     season.sort(function(a,c){ return a.no - c.no; });
@@ -953,12 +1217,14 @@ function endGame(){
   // The finished game is in the season list now; clear the live counters so the
   // Team tab and the next game start from zero instead of last week's numbers.
   S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
+  S.spots = {}; S.posSnaps = {}; S.safeties = {S1:null, S2:null};
+  S.onDeck = null; S.qbTurnUsed = {};
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0;
   S.field = []; S.starters = []; S.started = null;
   undoStack = [];
   pending = { inL: [], outL: [], auto: true };
   S.present = S.roster.map(function(p){ return p.num; });
-  sel = {start:[]};
+  sel = {field:null, bench:null, safety:null, start:[]};
   syncFieldSize(); goStep(1);
   save();
 }
@@ -1008,7 +1274,7 @@ function applyIncoming(raw, note){
       p.season.forEach(function(g){ if (!seen[g.id]) season.push(g); });
       season.sort(function(a,c){ return new Date(c.date) - new Date(a.date); });
     }
-    undoStack = []; sel = {start:[]};
+    undoStack = []; sel = {field:null, bench:null, safety:null, start:[]};
     pending = { inL: [], outL: [], auto: true };
     save(); saveSeason(); render();
     if (note) $(note).textContent = 'Loaded. You have the game — game ' + gameNumber() +
@@ -1028,13 +1294,18 @@ function checkIncomingLink(){
 
 /* ---------- export ---------- */
 function csvText(){
-  var rows = [['game','date','team','score us','score them','total plays','number','name','offense','defense','total']];
+  var pcols = OFF_SPOTS.concat(DEF_SPOTS);
+  var rows = [['game','date','team','score us','score them','total plays','number','name','offense','defense','total']
+              .concat(pcols).concat(['qb snaps'])];
   season.forEach(function(g){
     Object.keys(g.stats).forEach(function(n){
       var s = g.stats[n], t = (s.off||0)+(s.def||0);
       if (!t) return;
+      var ps = (g.posSnaps||{})[n] || {};
       rows.push([g.no||'', g.date.slice(0,10), g.team||'', g.us||0, g.them||0,
-                 g.plays, n, (g.names||{})[n]||'', s.off||0, s.def||0, t]);
+                 g.plays, n, (g.names||{})[n]||'', s.off||0, s.def||0, t]
+                .concat(pcols.map(function(c){ return ps[c]||0; }))
+                .concat([(g.qbs||{})[n]||0]));
     });
   });
   return rows.map(function(r){
@@ -1187,6 +1458,109 @@ function chipHtml(n, where){
     '<b>' + n + '</b><i>' + esc(label) + '</i></button>';
 }
 
+var posView = 'game';
+function firstPosGame(){
+  var g = season.filter(function(x){ return x.posSnaps && Object.keys(x.posSnaps).length; })
+                .sort(function(a,c){ return a.no - c.no; })[0];
+  return g ? g.no : null;
+}
+function renderPosGrid(){
+  var cols = OFF_SPOTS.concat(S.trackSafeties !== false ? DEF_SPOTS : []);
+  var seasonMode = posView === 'season';
+  var head = '<tr><th class="kid">Kid</th><th>Total</th>' +
+    cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') +
+    (seasonMode ? '<th>Spots</th><th>Never</th>' : '') + '</tr>';
+  var rows = S.roster.map(function(p){
+    var n = p.num, cells = '', tot = 0;
+    cols.forEach(function(c){
+      var v = seasonMode ? seasonSpot(n,c) : gameSpot(n,c);
+      cells += '<td class="' + (v ? '' : 'zero') + '">' + (v || '') + '</td>';
+    });
+    if (seasonMode){
+      season.forEach(function(g){
+        var st = g.stats && g.stats[n];
+        if (st) tot += (st.off||0) + (st.def||0);
+      });
+      var never = OFF_SPOTS.filter(function(c){ return seasonSpot(n,c) === 0; });
+      cells += '<td>' + seasonDistinct(n) + ' of 6</td>' +
+               '<td class="' + (never.length ? '' : 'zero') + '">' + (never.join(' ') || '\u2014') + '</td>';
+    } else {
+      tot = total(n);
+    }
+    return '<tr><td class="kid">' + n + (p.name ? ' ' + esc(p.name.trim().slice(0,4)) : '') + '</td>' +
+      '<td class="tot">' + (tot || '') + '</td>' + cells + '</tr>';
+  }).join('');
+  $('posGrid').innerHTML = '<table>' + head + rows + '</table>';
+  $('btnPosGame').classList.toggle('on', !seasonMode);
+  $('btnPosSeason').classList.toggle('on', seasonMode);
+  $('posMeta').textContent = seasonMode ? 'all games' : 'this game';
+  var since = firstPosGame();
+  $('posHint').textContent = seasonMode
+    ? (since ? 'Positions tracked since game ' + since + '. Offence spots only count on offence; S1 and S2 only on defence.'
+             : 'No finished games with position data yet.')
+    : 'Counted at the spot each kid was lined up at. Blank means none yet, which is fine.';
+}
+function nameOf(n){
+  var p = S.roster.filter(function(r){ return r.num === n; })[0];
+  return p && p.name ? p.name.trim().slice(0,4) : '';
+}
+function renderSpots(){
+  var rows = [['C','X','Y','Z'], ['R','Q']];
+  var html = '';
+  rows.forEach(function(row){
+    row.forEach(function(sp){
+      var n = S.spots[sp], back = row.length === 2 ? ' back' : '';
+      var cls = 'spot' + back + (n == null ? ' empty' : '') +
+        (n != null && pending.outL.indexOf(n) >= 0 ? ' swout' : '') +
+        (n != null && n === sel.field ? ' pick' : '') +
+        (sp === 'Q' && n != null && n === S.qbNow ? ' qbnowspot' : '');
+      html += '<button class="' + cls + '" data-spot="' + sp + '">' +
+        '<u>' + sp + '</u>' +
+        (n == null ? '<b>&mdash;</b><i>open</i>'
+                   : '<b>' + n + '</b><i>' + esc(nameOf(n) || SPOT_NAME[sp]) + '</i>') +
+        '</button>';
+    });
+  });
+  $('spotGrid').innerHTML = html;
+  $('fieldMeta').textContent = S.field.length + ' of ' + S.fieldSize +
+    (sel.field != null ? ' \u00b7 tap a spot to move ' + sel.field : '');
+}
+// One play before the swap, lock in who comes on and where they line up.
+function renderDeck(sg, due, canSwap){
+  var el = $('deckStrip');
+  var oneAway = S.live && canSwap && sg.inL.length &&
+                (S.interval - S.since) <= 1 && !due;
+  if (!oneAway){ el.classList.add('hide'); el.innerHTML = ''; return; }
+  if (!S.onDeck){
+    var freed = sg.outL.map(spotOf).filter(function(k){ return k; });
+    S.onDeck = [];
+    if (S.posMode === 'same' && freed.length === sg.inL.length){
+      sg.inL.forEach(function(n, i){ S.onDeck.push({kid: n, spot: freed[i]}); });
+    } else {
+      var plan = assignSpots(sg.inL.slice(), freed.length ? freed : openSpots(), false);
+      for (var sp in plan) S.onDeck.push({kid: plan[sp], spot: sp});
+    }
+  }
+  el.classList.remove('hide');
+  el.innerHTML = '<div class="deck"><b>On deck \u2014 next swap</b>' +
+    S.onDeck.map(function(d){
+      return '<span>' + (nameOf(d.kid) ? esc(nameOf(d.kid)) + ' ' : '') + d.kid +
+        ' \u2192 ' + d.spot + '</span>';
+    }).join('') + '</div>';
+}
+function renderSafeties(){
+  var show = S.live && S.mode === 'defense' && S.trackSafeties !== false;
+  $('safetyRow').classList.toggle('hide', !show);
+  if (!show) return;
+  $('safetyChips').innerHTML = DEF_SPOTS.map(function(sp){
+    var n = (S.safeties || {})[sp];
+    var cls = 'chip' + (sel.safety === sp ? ' pick' : '');
+    return '<button class="' + cls + '" data-safety="' + sp + '">' +
+      '<s>' + sp + '</s><b>' + (n == null ? '&mdash;' : n) + '</b><i>' +
+      (n == null ? 'tap' : esc(nameOf(n) || 'set')) + '</i></button>';
+  }).join('');
+}
+
 // Keep page content scrollable clear of the fixed dock, whatever its real height
 // (safe-area inset, PAT/4th-down rows, iOS text size).
 function padForDock(){
@@ -1327,8 +1701,9 @@ function render(){
     ? '<button class="cap" id="btnResetPending" style="color:var(--link);border:0;background:0;padding:14px 0;cursor:pointer;font:600 15px Barlow,sans-serif">Undo my changes</button>' : '';
   $('subExtra').innerHTML = resetLink;
 
-  $('fieldChips').innerHTML = S.field.slice().sort(function(a,c){return a-c;})
-    .map(function(n){ return chipHtml(n,'field'); }).join('') || '<p class="hint">Nobody on the field.</p>';
+  renderSpots();
+  renderDeck(sg, due, canSwap);
+  renderSafeties();
   $('benchChips').innerHTML = b.slice().sort(function(a,c){return a-c;})
     .map(function(n){ return chipHtml(n,'bench'); }).join('') || '<p class="hint">Bench is empty.</p>';
   $('clockTime').textContent = clockText();
@@ -1409,21 +1784,25 @@ function render(){
       (nm ? '<s>' + (here?'here':'out') + '</s>' : '') +
       '<b>' + p.num + '</b><i>' + esc(nm || (here?'here':'out')) + '</i></button>';
   }).join('');
+  renderPosGrid();
   $('hereMeta').textContent = S.present.length + ' of ' + S.roster.length;
 
   $('names').innerHTML = S.roster.map(function(p){
     return '<div class="set"><p class="rn" style="width:44px">' + p.num + '</p>' +
       '<input type="text" data-name="' + p.num + '" value="' +
       esc(p.name||'') + '" maxlength="4" placeholder="3 letters, e.g. MKE">' +
-      '<button class="qbtog' + (p.qb ? ' on' : '') + '" data-qb="' + p.num + '">QB</button></div>';
+      '<button class="qbtog' + (p.qb === 'main' ? ' on' : (p.qb === 'sometimes' ? ' some' : '')) +
+      '" data-qb="' + p.num + '">' +
+      (p.qb === 'main' ? 'QB' : (p.qb === 'sometimes' ? 'QB?' : '\u2014')) + '</button></div>';
   }).join('');
-  var nq = qbsPresent().length;
-  $('qbMeta').textContent = nq + ' marked of ' + S.present.length + ' here';
+  var nq = S.present.filter(isMainQb).length;
+  $('qbMeta').textContent = nq + ' main, ' + S.present.filter(isSometimesQb).length +
+    ' sometimes, of ' + S.present.length + ' here';
   $('qbHint').textContent = nq === 0
     ? 'Mark the kids who can throw. It only guides the auto-subs \u2014 you can still hand the ball to anyone.'
     : nq === 1
       ? 'Only one marked here, so the auto-subs will keep that kid on the field almost every play. Mark a second if you can.'
-      : 'This guides the auto-subs, which try to keep a marked kid on the field. Who actually takes the snaps is the QB row on the game screen, and can be anyone.';
+      : 'Tap to cycle: QB (main) \u2192 QB? (sometimes, one block a game) \u2192 \u2014 (not a QB). Who actually takes the snaps is the QB row on the game screen, and can be anyone.';
   $('qbHint').className = nq === 1 ? 'hint warn' : 'hint';
 
   /* setup tab */
@@ -1433,6 +1812,11 @@ function render(){
   $('vInterval').textContent = S.interval;
   $('appVer').textContent = APP_VERSION;
   $('vGap').textContent = S.gapLimit;
+  $('vSomeTurns').textContent = S.sometimesTurns;
+  $('btnPosLeast').classList.toggle('on', S.posMode !== 'same');
+  $('btnPosSame').classList.toggle('on', S.posMode === 'same');
+  $('btnSafeOn').classList.toggle('on', S.trackSafeties !== false);
+  $('btnSafeOff').classList.toggle('on', S.trackSafeties === false);
   $('gapSub').textContent = gapLimit() > S.gapLimit
     ? 'Rotation alone puts kids ' + (naturalGap()-2) + ' behind, so this flags at ' + gapLimit()
     : 'Compared to whoever has played most';
@@ -1527,8 +1911,52 @@ document.addEventListener('click', function(e){
   var t = e.target.closest('button'); if (!t) return;
   if (t.dataset.k) return pinKey(t.dataset.k);
 
+  if (t.dataset.spot){
+    var sp = t.dataset.spot, at = S.spots[sp];
+    if (sel.bench != null){                       // bench kid -> this spot: manual sub
+      snapshot('undo manual sub');
+      var inK = sel.bench; sel.bench = null;
+      if (at != null){
+        S.field = S.field.filter(function(x){ return x !== at; });
+        release([at]);
+      }
+      S.spots[sp] = inK; S.field.push(inK); assign([inK]);
+      S.onDeck = null; pending = { inL: [], outL: [], auto: true }; pickQb();
+      save(); return render();
+    }
+    if (sel.field != null && sel.field !== at){    // swap two kids' spots
+      snapshot('undo spot change');
+      var from = spotOf(sel.field);
+      if (from) S.spots[from] = at != null ? at : null;
+      S.spots[sp] = sel.field;
+      sel.field = null; S.onDeck = null; pickQb();
+      save(); return render();
+    }
+    sel.field = (at != null && sel.field !== at) ? at : null;
+    sel.bench = null;
+    return render();
+  }
+  if (t.dataset.safety){
+    var ssp = t.dataset.safety;
+    if (sel.bench != null || sel.field != null){
+      snapshot('undo safety');
+      S.safeties[ssp] = sel.bench != null ? sel.bench : sel.field;
+      sel.bench = null; sel.field = null;
+      save(); return render();
+    }
+    sel.safety = sel.safety === ssp ? null : ssp;
+    return render();
+  }
   if (t.dataset.n){
     var w = t.dataset.w, n = +t.dataset.n;
+    if (w === 'bench' && sel.safety){
+      snapshot('undo safety');
+      S.safeties[sel.safety] = n; sel.safety = null;
+      save(); return render();
+    }
+    if (w === 'bench' && sel.field != null){        // field kid picked, then a bench kid
+      sel.bench = n; return render();
+    }
     pending.auto = false;
     if (w === 'field'){
       var idx = pending.outL.indexOf(n);
@@ -1538,6 +1966,7 @@ document.addEventListener('click', function(e){
       var idx = pending.inL.indexOf(n);
       if (idx >= 0) pending.inL.splice(idx, 1);
       else pending.inL.push(n);
+      sel.bench = pending.inL.indexOf(n) >= 0 ? n : null;
     }
     return render();
   }
@@ -1549,7 +1978,10 @@ document.addEventListener('click', function(e){
   if (t.dataset.qb){
     var qn = +t.dataset.qb;
     var qp = S.roster.filter(function(r){ return r.num === qn; })[0];
-    if (qp){ qp.qb = !qp.qb; save(); }
+    if (qp){
+      qp.qb = qp.qb === 'main' ? 'sometimes' : (qp.qb === 'sometimes' ? null : 'main');
+      save();
+    }
     return render();
   }
   if (t.dataset.att){
@@ -1558,7 +1990,7 @@ document.addEventListener('click', function(e){
       S.present = S.present.filter(function(x){ return x !== an; });
       var was = S.field.indexOf(an) >= 0;
       S.field = S.field.filter(function(x){ return x !== an; });
-      if (was){ release([an]); fillField(); }
+      if (was){ release([an]); var sp = spotOf(an); if (sp) S.spots[sp] = null; S.onDeck = null; fillField(); }
     } else {
       S.present.push(an);
       if (!S.stats[an]) S.stats[an] = {off:0, def:0};
@@ -1608,6 +2040,12 @@ document.addEventListener('click', function(e){
   }
 
   switch(t.id){
+    case 'btnPosGame':   posView = 'game'; return render();
+    case 'btnPosSeason': posView = 'season'; return render();
+    case 'btnPosLeast':  S.posMode = 'least'; save(); return render();
+    case 'btnPosSame':   S.posMode = 'same'; save(); return render();
+    case 'btnSafeOn':    S.trackSafeties = true; save(); return render();
+    case 'btnSafeOff':   S.trackSafeties = false; save(); return render();
     case 'btnUndoPat': return undo();
     case 'btnQbNow': snapshot('undo QB change'); nextQb(); render(); save(); return;
     case 'btnSnap':  return runPlay('play');
@@ -1737,7 +2175,7 @@ $('backupFile').addEventListener('change', function(e){
       for (var k in data.state) S[k] = data.state[k];
       if (data.season && Array.isArray(data.season)) season = data.season;
       save(); saveSeason();
-      undoStack = []; sel = {start:[]};
+      undoStack = []; sel = {field:null, bench:null, safety:null, start:[]};
       pending = { inL: [], outL: [], auto: true };
       unlocked = false;
       render();
@@ -1761,11 +2199,13 @@ function resetEverything(){
     team:'', roster:[], present:[], field:[], stats:{}, entry:{}, exit:{}, qbs:{}, qbNow:null, tick:0,
     starters:[], started:null, live:false,
     startSide:'offense', half:1, halfLen:25, clock:null,
+    spots:{}, posSnaps:{}, safeties:{S1:null,S2:null}, onDeck:null, qbTurnUsed:{},
+    posMode:'least', sometimesTurns:1, trackSafeties:true,
     fieldSize:6, subSize:3, interval:4, trigger:'plays', rotation:'sequence', gapLimit:6,
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
     weeks:8, slot:1, pin:''
   };
-  season = []; undoStack = []; sel = {start:[]};
+  season = []; undoStack = []; sel = {field:null, bench:null, safety:null, start:[]};
   pending = { inL: [], outL: [], auto: true };
   for (var i=1;i<=12;i++) S.roster.push({num:i, name:''});
   S.present = S.roster.map(function(p){ return p.num; });
@@ -1797,7 +2237,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v24';
+var APP_VERSION = 'v25';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
