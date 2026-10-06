@@ -30,7 +30,7 @@
   .tabs{display:flex; border-bottom:1px solid var(--line); margin:0 -14px 10px;
         padding:env(safe-area-inset-top) 14px 0; position:sticky; top:0; background:var(--bg); z-index:20;}
   .tabs button{flex:1; background:none; border:0; border-bottom:3px solid transparent;
-               color:var(--muted); font:600 15px 'Barlow',sans-serif; padding:11px 0 9px; cursor:pointer;}
+               color:var(--muted); font:600 15px 'Barlow',sans-serif; padding:14px 0 12px; cursor:pointer;}
   .tabs button.on{color:var(--text); border-bottom-color:var(--text);}
 
   /* header */
@@ -96,15 +96,22 @@
   /* the kid actually taking snaps, eligible or not */
   .qbpick .chip.now{border-color:var(--off); box-shadow:0 0 0 2px rgba(255,174,26,.35);}
   .qbpick .chip.now i{color:var(--off);}
-  .nameset{gap:7px;}
-  .numin{flex:none; width:52px; text-align:center; font-weight:700;}
+  .kidhead{display:flex; gap:8px; padding:0 2px 7px; font:600 11px 'Barlow',sans-serif;
+           color:var(--muted); letter-spacing:.06em; text-transform:uppercase;}
+  .kidhead span{width:62px; flex:none; text-align:center;}
+  .kidhead span.nm{flex:1; text-align:left;}
+  .kidhead span.x{width:44px;}
+  .kidrow{display:flex; align-items:center; gap:8px; padding:4px 0;}
+  .kidrow input{height:46px; font-size:17px;}
+  .numin{flex:none; width:54px; text-align:center; font-weight:700; font-size:19px;}
+  .nmin{flex:1; min-width:0;}
   .delkid.armed{width:auto; padding:0 10px; border-color:var(--warn); color:var(--warn); font-size:13px;}
-  .delkid{flex:none; width:38px; height:40px; border-radius:10px; cursor:pointer;
+  .delkid{flex:none; width:44px; height:46px; border-radius:10px; cursor:pointer;
           border:2px solid var(--line); background:var(--panel2); color:var(--muted);
           font:700 17px 'Barlow',sans-serif;}
-  .qbtog{flex:none; width:66px; height:40px; border-radius:10px; cursor:pointer;
+  .qbtog{flex:none; width:62px; height:46px; border-radius:10px; cursor:pointer;
          border:2px solid var(--line); background:var(--panel2); color:var(--muted);
-         font:700 12.5px 'Barlow',sans-serif; letter-spacing:.02em;}
+         font:700 13px 'Barlow',sans-serif; letter-spacing:.02em;}
   .qbtog.on{border-color:var(--link); color:var(--link); background:rgba(91,155,213,.16);}
   .qbtog.some{border-color:var(--muted); color:var(--text);}
   .spotgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:7px;}
@@ -436,12 +443,8 @@
         <h2>On field <em id="fieldMeta"></em></h2>
         <div class="spotgrid" id="spotGrid"></div>
         <div id="safetyRow" class="hide">
-          <h2 style="margin:14px 0 9px">Safeties <em>tap a chip, then a kid</em></h2>
+          <h2 style="margin:14px 0 9px">Safeties <em>tap a chip, then a kid on the field</em></h2>
           <div class="chips safety" id="safetyChips"></div>
-        </div>
-        <div id="qbSection" class="hide">
-          <h2 style="margin:14px 0 9px">QB <em id="qbRowMeta"></em></h2>
-          <div class="chips qbpick" id="qbChips"></div>
         </div>
         <h2 style="margin:14px 0 9px">Bench <em id="benchMeta"></em></h2>
         <p class="hint" style="margin:0 0 7px">Fewest plays first &mdash; these kids need reps.</p>
@@ -503,7 +506,8 @@
     <div class="card">
       <h2>Your kids <em id="qbMeta"></em></h2>
       <div id="names"></div>
-      <button class="big outline" id="btnAddPlayer">Add another number</button>
+      <button class="big fill" id="btnAddPlayer">Add a kid</button>
+      <button class="big outline" id="btnRosterEdit" style="margin-top:8px">Remove a kid</button>
       <p class="hint" id="qbHint">Tap QB for every kid who can throw. The rotation always keeps at least one of them on the field.</p>
     </div>
   </div>
@@ -1076,18 +1080,18 @@ function qbOrder(list){
 function eligibleQbs(){ return S.field.filter(isQb); }
 // Auto-pick prefers the kids marked QB, but falls back to the whole field so
 // there is always someone taking snaps.
-function pickQb(force){
-  if (!S.field.length){ S.qbNow = null; return; }
-  if (!force && S.qbNow != null && S.field.indexOf(S.qbNow) >= 0) return;
-  var pool = eligibleQbs();
-  if (!pool.length) pool = S.field.slice();
-  S.qbNow = qbOrder(pool)[0];
-}
+// The kid at Q is the quarterback; there is no second idea of it.
+function pickQb(){ S.qbNow = S.spots.Q != null ? S.spots.Q : null; }
+// Handing the ball on moves that kid into the Q spot and the old QB into theirs.
 function nextQb(){
   var e = qbOrder(S.field);
   if (e.length < 2) return;
-  var i = e.indexOf(S.qbNow);
-  S.qbNow = e[(i + 1) % e.length];
+  var at = S.spots.Q, i = e.indexOf(at);
+  var take = e[(i + 1) % e.length];
+  var from = spotOf(take);
+  S.spots.Q = take;
+  if (from && at != null) S.spots[from] = at;
+  S.qbNow = take;
 }
 function hasQb(list){ return list.some(isQb); }
 function waiting(list){
@@ -1129,6 +1133,8 @@ function snapshot(label){
 }
 function undo(){
   var s = undoStack.pop(); if (!s) return;
+  undoneMsg = lastAction || 'last tap';
+  undoneAt = Date.now();
   var p = JSON.parse(s);
   for (var k in p.S) S[k] = p.S[k];
   sel = p.sel; lastAction = p.label || '';
@@ -1665,29 +1671,12 @@ function guard(label, fn){
 }
 
 /* ---------- render ---------- */
-function chipHtml(n, where){
-  var cls = short(n) ? 'short' : '';
-  if (where === 'field' && pending.outL.indexOf(n) >= 0) cls = 'swout';
-  else if (where === 'bench' && pending.inL.indexOf(n) >= 0) cls = 'swin';
-  var p = S.roster.filter(function(r){ return r.num === n; })[0];
-  var nm = p && p.name ? p.name.trim() : '';
-  // With a name, the chip reads number + name and the play count moves to a
-  // corner badge. Without one, the count keeps the name slot as before.
-  // Named chips keep the name on the line and flag the swap in the corner badge;
-  // unnamed chips have only the one line, so IN/OUT takes it.
-  var swap = (where === 'field' && pending.outL.indexOf(n) >= 0) ? 'OUT'
-           : (where === 'bench' && pending.inL.indexOf(n) >= 0) ? 'IN' : '';
-  var label = nm ? nm : (swap || total(n));
-  var badge = nm ? (swap || total(n)) : '';
-  return '<button class="chip ' + cls + (isQb(n) ? ' qb' : '') +
-    (n === S.qbNow && where === 'field' ? ' now' : '') +
-    '" data-n="' + n + '" data-w="' + where + '">' +
-    (badge ? '<s>' + esc(badge) + '</s>' : '') +
-    '<b>' + n + '</b><i>' + esc(label) + '</i></button>';
-}
+
 
 var posView = 'game';
 var pendingLink = null;
+var undoneMsg = '', undoneAt = 0;
+var rosterEdit = false, addFocus = false;
 var delArmed = null;   // first tap arms the x, second removes the kid
 var endArmed = false;  // End game needs a second tap, PIN or no PIN
 function firstPosGame(){
@@ -1963,7 +1952,9 @@ function render(){
   top.classList.toggle('hide', !(due && canSwap));
   top.textContent = $('btnSub').textContent;
   top.disabled = $('btnSub').disabled;
-  $('subExtra').innerHTML = (qbWarn && S.qbRule !== 'hard'
+  var undoNote = (undoneMsg && Date.now() - undoneAt < 6000)
+    ? '<p class="hint ok" style="margin:9px 0 0">Took back: ' + esc(undoneMsg) + '</p>' : '';
+  $('subExtra').innerHTML = undoNote + (qbWarn && S.qbRule !== 'hard'
     ? '<p class="hint warn" style="margin:9px 0 0">Heads up: after this sub nobody on the field is marked QB. ' +
       'Tap a kid and a spot if you want to change it.</p>' : '') + resetLink;
 
@@ -1996,18 +1987,6 @@ function render(){
   var needsSetup = !S.live && !S.setupSkipped && !S.team &&
     !S.roster.some(function(p){ return p.name; }) && !season.length;
   $('firstRun').classList.toggle('hide', !needsSetup);
-  var showQb = S.live && S.mode === 'offense';
-  $('qbSection').classList.toggle('hide', !showQb);
-  if (showQb){
-    $('qbChips').innerHTML = S.field.slice().sort(function(a,c){ return a-c; }).map(function(n){
-      var pq = S.roster.filter(function(r){ return r.num === n; })[0];
-      var nm = pq && pq.name ? pq.name.trim() : '';
-      return '<button class="chip' + (isQb(n) ? ' qb' : '') + (n === S.qbNow ? ' now' : '') +
-        '" data-qbnow="' + n + '"><s>' + qbSnaps(n) + '</s><b>' + n + '</b><i>' +
-        esc(nm || (n === S.qbNow ? 'qb' : '\u00a0')) + '</i></button>';
-    }).join('');
-    $('qbRowMeta').textContent = 'tap to change \u00b7 number = snaps at QB';
-  }
   $('benchMeta').textContent = b.length + ' waiting';
 
   /* dock */
@@ -2030,12 +2009,13 @@ function render(){
     ? 'we scored \u2014 they get the ball' : 'they scored \u2014 we get the ball';
   $('fourthRow').classList.toggle('hide', !ask4);
   var qbBtn = $('btnQbNow');
+  S.qbNow = S.spots.Q != null ? S.spots.Q : null;
   if (S.mode === 'offense' && S.qbNow != null){
     var qp = S.roster.filter(function(r){ return r.num === S.qbNow; })[0];
     qbBtn.textContent = 'QB NOW \u00b7 ' + S.qbNow +
       (qp && qp.name ? ' ' + qp.name.trim().toUpperCase() : '');
     qbBtn.classList.remove('hide');
-    qbBtn.disabled = eligibleQbs().length < 2;
+    qbBtn.disabled = S.field.length < 2;
   } else {
     qbBtn.classList.add('hide');
   }
@@ -2079,18 +2059,30 @@ function render(){
   renderPosGrid();
   $('hereMeta').textContent = S.present.length + ' of ' + S.roster.length;
 
-  $('names').innerHTML = S.roster.map(function(p){
-    return '<div class="set nameset">' +
+  $('names').innerHTML =
+    '<div class="kidhead"><span>No.</span><span class="nm">Name</span><span>Can QB</span>' +
+    (rosterEdit ? '<span class="x"></span>' : '') + '</div>' +
+    S.roster.map(function(p){
+    return '<div class="kidrow">' +
       '<input class="numin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" ' +
       'data-num="' + (+p.num) + '" value="' + (+p.num) + '">' +
-      '<input type="text" data-name="' + (+p.num) + '" value="' +
-      esc(p.name||'') + '" maxlength="14" placeholder="First name">' +
+      '<input class="nmin" type="text" data-name="' + (+p.num) + '" value="' +
+      esc(p.name||'') + '" maxlength="14" placeholder="First name" ' +
+      'autocapitalize="words" autocorrect="off" spellcheck="false">' +
       '<button class="qbtog' + (p.qb === 'main' ? ' on' : (p.qb === 'sometimes' ? ' some' : '')) +
       '" data-qb="' + (+p.num) + '">' +
-      (p.qb === 'main' ? 'QB' : (p.qb === 'sometimes' ? 'QB?' : '\u2014')) + '</button>' +
-      '<button class="delkid' + (delArmed === p.num ? ' armed' : '') + '" data-del="' + (+p.num) + '">' +
-      (delArmed === p.num ? 'Remove?' : '\u00d7') + '</button></div>';
+      (p.qb === 'main' ? 'YES' : (p.qb === 'sometimes' ? 'SOME' : 'no')) + '</button>' +
+      (rosterEdit ? '<button class="delkid' + (delArmed === p.num ? ' armed' : '') +
+        '" data-del="' + (+p.num) + '">' + (delArmed === p.num ? 'Sure?' : '\u00d7') + '</button>' : '') +
+      '</div>';
   }).join('');
+  $('btnRosterEdit').textContent = rosterEdit ? 'Done' : 'Remove a kid';
+  if (addFocus){
+    addFocus = false;
+    var nmBoxes = $('names').querySelectorAll('input.nmin');
+    var lastBox = nmBoxes[nmBoxes.length-1];
+    if (lastBox && lastBox.focus) setTimeout(function(){ lastBox.focus(); }, 40);
+  }
   var nq = S.present.filter(isMainQb).length;
   $('qbMeta').textContent = nq + ' main, ' + S.present.filter(isSometimesQb).length +
     ' sometimes, of ' + S.present.length + ' here';
@@ -2212,6 +2204,11 @@ document.addEventListener('click', function(e){
 
   if (t.dataset.spot){
     var sp = t.dataset.spot, at = S.spots[sp];
+    if (sel.safety && at != null){            // a safety chip is waiting for a kid
+      snapshot('undo safety');
+      S.safeties[sel.safety] = at; sel.safety = null;
+      save(); return render();
+    }
     if (sel.bench != null){                       // bench kid -> this spot: manual sub
       snapshot('undo manual sub');
       var inK = sel.bench; sel.bench = null;
@@ -2253,20 +2250,11 @@ document.addEventListener('click', function(e){
   }
   if (t.dataset.n){
     var w = t.dataset.w, n = +t.dataset.n;
-    if (sel.safety && w === 'field'){
-      snapshot('undo safety');
-      S.safeties[sel.safety] = n; sel.safety = null;
-      save(); return render();
-    }
     if (w === 'bench' && sel.field != null){        // field kid picked, then a bench kid
       sel.bench = n; return render();
     }
     pending.auto = false;
-    if (w === 'field'){
-      var idx = pending.outL.indexOf(n);
-      if (idx >= 0) pending.outL.splice(idx, 1);
-      else pending.outL.push(n);
-    } else {
+    {
       var idx = pending.inL.indexOf(n);
       if (idx >= 0) pending.inL.splice(idx, 1);
       else pending.inL.push(n);
@@ -2368,8 +2356,15 @@ document.addEventListener('click', function(e){
   }
 
   switch(t.id){
-    case 'btnDoSetup':   switchTab('tTeam'); return;
+    case 'btnDoSetup':
+      switchTab('tTeam');
+      setTimeout(function(){
+        var c = $('names');
+        if (c && c.scrollIntoView) c.scrollIntoView();
+      }, 50);
+      return;
     case 'btnSkipSetup': S.setupSkipped = true; save(); return render();
+    case 'btnRosterEdit': rosterEdit = !rosterEdit; delArmed = null; return render();
     case 'btnPosGame':   posView = 'game'; return render();
     case 'btnPosSeason': posView = 'season'; return render();
     case 'btnPosLeast':  S.posMode = 'least'; save(); return render();
@@ -2467,6 +2462,7 @@ document.addEventListener('click', function(e){
     case 'btnResetGo': return resetEverything();
     case 'btnForgotPin': return revealPin();
     case 'btnAddPlayer': {
+      addFocus = true;
       var mx = Math.max.apply(null, [0].concat(S.roster.map(function(p){ return p.num; })));
       S.roster.push({num:mx+1, name:''}); S.stats[mx+1] = {off:0, def:0};
       render(); save(); return;
@@ -2601,7 +2597,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v31';
+var APP_VERSION = 'v33';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
