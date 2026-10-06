@@ -96,6 +96,12 @@
   /* the kid actually taking snaps, eligible or not */
   .qbpick .chip.now{border-color:var(--off); box-shadow:0 0 0 2px rgba(255,174,26,.35);}
   .qbpick .chip.now i{color:var(--off);}
+  .nameset{gap:7px;}
+  .numin{flex:none; width:52px; text-align:center; font-weight:700;}
+  .delkid.armed{width:auto; padding:0 10px; border-color:var(--warn); color:var(--warn); font-size:13px;}
+  .delkid{flex:none; width:38px; height:40px; border-radius:10px; cursor:pointer;
+          border:2px solid var(--line); background:var(--panel2); color:var(--muted);
+          font:700 17px 'Barlow',sans-serif;}
   .qbtog{flex:none; width:66px; height:40px; border-radius:10px; cursor:pointer;
          border:2px solid var(--line); background:var(--panel2); color:var(--muted);
          font:700 12.5px 'Barlow',sans-serif; letter-spacing:.02em;}
@@ -110,7 +116,8 @@
   .spotgrid .spot b{font:700 23px 'Barlow Condensed',sans-serif; line-height:1;
                     font-variant-numeric:tabular-nums;}
   .spotgrid .spot i{font-style:normal; font:700 11px 'Barlow',sans-serif; color:var(--muted);
-                    text-transform:uppercase; letter-spacing:.03em;}
+                    text-transform:uppercase; letter-spacing:.03em; max-width:100%;
+                    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px;}
   .spotgrid .spot.back{grid-column:span 2;}
   .spotgrid .spot.empty{border-style:dashed; color:var(--muted);}
   .spotgrid .spot.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
@@ -166,7 +173,8 @@
   .chip.swout s{color:var(--warn); font-size:11px; font-weight:700;}
   .chip.swin s{color:var(--ok); font-size:11px; font-weight:700;}
     .chip i{font-style:normal; font:700 12px 'Barlow',sans-serif; color:var(--muted);
-          margin-top:2px; letter-spacing:.04em; text-transform:uppercase;}
+          margin-top:2px; letter-spacing:.04em; text-transform:uppercase;
+          max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .field .chip{border-color:#4A5D72; background:#28323E;}
   .chip.short{border-color:var(--warn);} .chip.short i{color:var(--warn);}
   .chip.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
@@ -372,15 +380,15 @@
       <div class="card hide" id="step3">
         <h2>How the rotation runs</h2>
         <div class="set">
-          <p>Swapped at a time<em>How many come off together</em></p>
+          <p>Subbed at a time<em>How many come off together</em></p>
           <div class="step"><button data-s="subSize" data-d="-1">&minus;</button><b id="wSubSize"></b><button data-s="subSize" data-d="1">+</button></div>
         </div>
         <div class="set">
-          <p id="wTrigLabel">Swap every<em id="wTrigSub"></em></p>
+          <p id="wTrigLabel">Sub every<em id="wTrigSub"></em></p>
           <div class="step"><button data-s="interval" data-d="-1">&minus;</button><b id="wInterval"></b><button data-s="interval" data-d="1">+</button></div>
         </div>
         <div class="set">
-          <p>Count in<em>Possessions keep kids from swapping mid&#8209;drive</em></p>
+          <p>Count by<em>Possessions keep kids from subbing mid&#8209;drive</em></p>
           <div class="seg"><button id="btnTrigPlay2">Plays</button><button id="btnTrigPoss2">Possessions</button></div>
         </div>
         <div class="set">
@@ -410,6 +418,7 @@
             <div class="csub" id="cSub"></div></div>
         </div>
         <div id="deckStrip" class="hide"></div>
+        <button class="big fill hide" id="btnSubTop" style="margin-bottom:12px"></button>
         <h2>On field <em id="fieldMeta"></em></h2>
         <div class="spotgrid" id="spotGrid"></div>
         <div id="safetyRow" class="hide">
@@ -464,7 +473,7 @@
         <span style="color:var(--def)">&#9646;</span> defense</p>
     </div>
     <div class="card">
-      <h2>Spots <em id="posMeta"></em></h2>
+      <h2>Positions <em id="posMeta"></em></h2>
       <div class="seg" style="margin-bottom:10px">
         <button id="btnPosGame">This game</button><button id="btnPosSeason">Season</button>
       </div>
@@ -478,7 +487,7 @@
       <p class="hint">Tap to check a kid in or out. Works mid-game &mdash; anyone who leaves the field is replaced right away, and a late arrival slots into the rotation at his number.</p>
     </div>
     <div class="card">
-      <h2>Names and QB <em id="qbMeta"></em></h2>
+      <h2>Your kids <em id="qbMeta"></em></h2>
       <div id="names"></div>
       <button class="big outline" id="btnAddPlayer">Add another number</button>
       <p class="hint" id="qbHint">Tap QB for every kid who can throw. The rotation always keeps at least one of them on the field.</p>
@@ -496,15 +505,15 @@
     <div class="card">
       <h2>How the rotation runs</h2>
       <div class="set">
-        <p>Swapped at a time<em>How many come off together</em></p>
+        <p>Subbed at a time<em>How many come off together</em></p>
         <div class="step"><button data-s="subSize" data-d="-1">&minus;</button><b id="vSubSize"></b><button data-s="subSize" data-d="1">+</button></div>
       </div>
       <div class="set">
-        <p id="trigLabel">Swap every<em id="trigSub"></em></p>
+        <p id="trigLabel">Sub every<em id="trigSub"></em></p>
         <div class="step"><button data-s="interval" data-d="-1">&minus;</button><b id="vInterval"></b><button data-s="interval" data-d="1">+</button></div>
       </div>
       <div class="set">
-        <p>Count in<em>Possessions keep kids from swapping mid&#8209;drive</em></p>
+        <p>Count by<em>Possessions keep kids from subbing mid&#8209;drive</em></p>
         <div class="seg"><button id="btnTrigPlay">Plays</button><button id="btnTrigPoss">Possessions</button></div>
       </div>
       <div class="set">
@@ -512,11 +521,11 @@
         <div class="seg"><button id="btnRotSeq">In order</button><button id="btnRotCatch">Catch-up</button></div>
       </div>
       <div class="set">
-        <p>Where subs line up<em>Least-played spot, or take the spot of the kid going out</em></p>
+        <p>Where subs line up<em>Least-played position, or take the position of the kid going out</em></p>
         <div class="seg"><button id="btnPosLeast">Least-played</button><button id="btnPosSame">Same spot</button></div>
       </div>
       <div class="set">
-        <p>Sometimes-QB turns a game<em>One block at QB for each QB? kid</em></p>
+        <p>Sometimes-QB series a game<em>One series at QB for each QB? kid</em></p>
         <div class="step"><button data-s="sometimesTurns" data-d="-1">&minus;</button><b id="vSomeTurns"></b><button data-s="sometimesTurns" data-d="1">+</button></div>
       </div>
       <div class="set">
@@ -524,19 +533,19 @@
         <div class="seg"><button id="btnQbSoft">Soft</button><button id="btnQbHard">Hard</button></div>
       </div>
       <div class="set">
-        <p>Track safeties<em>S1 and S2 chips on defence</em></p>
+        <p>Track safeties<em>S1 and S2 chips on defense</em></p>
         <div class="seg"><button id="btnSafeOn">On</button><button id="btnSafeOff">Off</button></div>
       </div>
       <div class="set">
-        <p>Flag a kid this far behind<em id="gapSub">Compared to whoever has played most</em></p>
+        <p>Warn me when a kid falls this far behind<em id="gapSub">Compared to whoever has played most</em></p>
         <div class="step"><button data-s="gapLimit" data-d="-1">&minus;</button><b id="vGap"></b><button data-s="gapLimit" data-d="1">+</button></div>
       </div>
-      <button class="big outline" id="btnResetCounter">Reset the count to the next swap</button>
+      <button class="big outline" id="btnResetCounter">Start the rotation count over</button>
     </div>
 
     <div class="card">
       <h2>Lock code <em id="pinState"></em></h2>
-      <p class="hint" style="margin-top:0">A 4-digit code before starting a game, ending one, deleting one, or loading a handoff. It stops a stray tap from wiping a game &mdash; it isn't real security, and the code is stored in plain text on this phone.</p>
+      <p class="hint" style="margin-top:0">A 4-digit code before starting a game, ending one, deleting one, or loading a handoff. It stops a stray tap from wiping a game. It is a speed bump, not a password.</p>
       <button class="big outline" id="btnSetPin">Set a code</button>
       <button class="big outline hide" id="btnClearPin">Turn the code off</button>
       <button class="big outline hide" id="btnLockNow">Lock now</button>
@@ -569,7 +578,7 @@
 
     <div class="card">
       <h2>Version <em id="appVer"></em></h2>
-      <p class="hint" style="margin:0">If a change I asked for isn't here, this number tells us whether the phone has the new version yet.</p>
+      <p class="hint" style="margin:0">Handy when checking whether this phone has the latest version.</p>
     </div>
 
     <div class="card">
@@ -634,7 +643,7 @@
     <div class="grid2" id="normalRow">
       <button id="btnFirst">First down<small>counts, back to 1st</small></button>
       <button id="btnTD">Touchdown<small>6 points</small></button>
-      <button id="btnTurn">Possession<small id="turnSub"></small></button>
+      <button id="btnTurn">Turnover<small id="turnSub"></small></button>
       <button id="btnUndo">Undo<small id="undoSub">nothing yet</small></button>
     </div>
     <div class="grid2 hide" id="patRow">
@@ -642,6 +651,10 @@
       <button class="pat" id="btnPat2">Two points<small>+2</small></button>
       <button id="btnPat0">No good<small>+0</small></button>
       <button id="btnUndoPat">Undo<small id="undoPatSub">take back the TD</small></button>
+    </div>
+    <div class="grid2 hide" id="kickRow">
+      <button class="pat" id="btnKick">Kick off<small id="kickSub"></small></button>
+      <button id="btnUndoKick">Undo<small>take back the score</small></button>
     </div>
     <div class="grid2 hide" id="fourthRow">
       <button class="pat" id="btn4First">First down<small>drive continues</small></button>
@@ -656,10 +669,10 @@
 var S = {
   team: '', roster: [], present: [], field: [], stats: {}, entry: {}, exit: {}, qbs: {}, qbNow: null, tick: 0,
   starters: [], started: null, live: false,
-  startSide: 'offense', half: 1, halfLen: 25, clock: null,
+  startSide: 'offense', half: 1, halfLen: 25, clock: null, kickoff: false,
   spots: {}, posSnaps: {}, safeties: {S1:null, S2:null}, onDeck: null, qbTurnUsed: {},
   qLast: null, qHeld: 0,
-  posMode: 'least', sometimesTurns: 1, trackSafeties: true, qbRule: 'soft',
+  posMode: 'same', sometimesTurns: 1, trackSafeties: false, qbRule: 'soft',
   fieldSize: 6, subSize: 3, interval: 4, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
   weeks: 8, slot: 1, pin: ''
@@ -694,8 +707,7 @@ function showBrowserWarning(){
   b.style.cssText = 'position:relative;z-index:21;background:#8A6500;color:#fff;' +
     'padding:calc(9px + env(safe-area-inset-top)) 40px 9px 16px;font:600 14px/1.35 Barlow,sans-serif;' +
     'text-align:center;';
-  b.textContent = 'This is a Safari tab. Games you keep on the home-screen app are not here, ' +
-    'and Safari can clear this tab\u2019s data after a week. Add to Home Screen and use that icon.';
+  b.textContent = 'Tap Share, then Add to Home Screen, and open it from that icon. Your team is saved on the icon version, not here.';
   var x = document.createElement('button');
   x.textContent = '\u00d7';
   x.style.cssText = 'position:absolute;top:calc(5px + env(safe-area-inset-top));right:8px;background:none;' +
@@ -753,9 +765,9 @@ function load(){
     if (!S.posSnaps) S.posSnaps = {};
     if (!S.safeties) S.safeties = {S1:null, S2:null};
     if (!S.qbTurnUsed) S.qbTurnUsed = {};
-    if (S.posMode == null) S.posMode = 'least';
+    if (S.posMode == null) S.posMode = 'same';
     if (S.sometimesTurns == null) S.sometimesTurns = 1;
-    if (S.trackSafeties == null) S.trackSafeties = true;
+    if (S.trackSafeties == null) S.trackSafeties = false;
     if (S.qbRule == null) S.qbRule = 'soft';
     if (S.field.length && !spotsFilled().length){
       var inOrder = S.field.slice().sort(function(a,c){ return a-c; });
@@ -811,12 +823,38 @@ function qbLevel(n){
 function isMainQb(n){ return qbLevel(n) === 'main'; }
 function isSometimesQb(n){ return qbLevel(n) === 'sometimes'; }
 
+// Jersey numbers are the app's key for everything, so a renumber has to move
+// every store that is keyed by one, in this game and in the season archive.
+function renumber(oldN, newN){
+  function moveKey(o){
+    if (!o || !(oldN in o)) return;
+    o[newN] = o[oldN]; delete o[oldN];
+  }
+  function moveList(l){
+    if (!l) return;
+    for (var i=0;i<l.length;i++) if (l[i] === oldN) l[i] = newN;
+  }
+  S.roster.forEach(function(p){ if (p.num === oldN) p.num = newN; });
+  [S.stats, S.entry, S.exit, S.qbs, S.posSnaps, S.qbTurnUsed].forEach(moveKey);
+  [S.present, S.field, S.starters, sel.start].forEach(moveList);
+  for (var sp in S.spots) if (S.spots[sp] === oldN) S.spots[sp] = newN;
+  for (var ds in (S.safeties||{})) if (S.safeties[ds] === oldN) S.safeties[ds] = newN;
+  if (S.qbNow === oldN) S.qbNow = newN;
+  if (S.qLast === oldN) S.qLast = newN;
+  season.forEach(function(g){
+    [g.stats, g.qbs, g.posSnaps, g.names].forEach(moveKey);
+    moveList(g.starters);
+  });
+  saveSeason();
+  S.roster.sort(function(a,c){ return a.num - c.num; });
+}
+
 /* ---------- positions ---------- */
 var qbWarn = false;
 var SPOTS = ['C','X','Y','Z','R','Q'];          // line row, then back row
 var OFF_SPOTS = ['C','Q','R','X','Y','Z'];
 var DEF_SPOTS = ['S1','S2'];
-var SPOT_NAME = {C:'Center', X:'Split end', Y:'Slot', Z:'Flanker', Q:'QB', R:'Runner',
+var SPOT_NAME = {C:'Snapper', X:'Wide', Y:'Slot', Z:'Outside', Q:'QB', R:'Back',
                  S1:'Safety 1', S2:'Safety 2'};
 function spotOf(n){
   for (var k in S.spots) if (S.spots[k] === n) return k;
@@ -1226,6 +1264,13 @@ function pat(points){
   countPlay();
   if (points){ if (S.mode === 'offense') S.us += points; else S.them += points; }
   S.pat = false;
+  S.kickoff = true;      // nothing changes sides until the coach says so
+  pending.auto = true;
+  blink(); render(); save();
+}
+function doKickoff(){
+  snapshot('undo kickoff');
+  S.kickoff = false;
   flipSide();
   pending.auto = true;
   blink(); render(); save();
@@ -1271,7 +1316,7 @@ function startGame(){
   S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
   S.spots = {}; S.posSnaps = {}; S.safeties = {S1:null, S2:null};
   S.onDeck = null; S.qbTurnUsed = {}; S.qLast = null; S.qHeld = 0;
-  S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false;
+  S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false; S.kickoff = false;
   S.mode = S.startSide === 'defense' ? 'defense' : 'offense';
   S.half = 1; S.clock = newClock();
   S.started = new Date().toISOString(); S.live = true;
@@ -1298,7 +1343,7 @@ function endGame(){
     saveSeason();
   }
   S.slot = nextOpenSlot();
-  S.live = false; S.pat = false;
+  S.live = false; S.pat = false; S.kickoff = false;
   // The finished game is in the season list now; clear the live counters so the
   // Team tab and the next game start from zero instead of last week's numbers.
   S.stats = {}; S.entry = {}; S.exit = {}; S.qbs = {}; S.qbNow = null; S.tick = 0;
@@ -1306,7 +1351,6 @@ function endGame(){
   S.onDeck = null; S.qbTurnUsed = {}; S.qLast = null; S.qHeld = 0;
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0;
   S.field = []; S.starters = []; S.started = null;
-  undoStack = [];
   pending = { inL: [], outL: [], auto: true };
   S.present = S.roster.map(function(p){ return p.num; });
   sel = {field:null, bench:null, safety:null, start:[]};
@@ -1527,7 +1571,7 @@ function chipHtml(n, where){
   if (where === 'field' && pending.outL.indexOf(n) >= 0) cls = 'swout';
   else if (where === 'bench' && pending.inL.indexOf(n) >= 0) cls = 'swin';
   var p = S.roster.filter(function(r){ return r.num === n; })[0];
-  var nm = p && p.name ? p.name.trim().slice(0,4) : '';
+  var nm = p && p.name ? p.name.trim() : '';
   // With a name, the chip reads number + name and the play count moves to a
   // corner badge. Without one, the count keeps the name slot as before.
   // Named chips keep the name on the line and flag the swap in the corner badge;
@@ -1544,6 +1588,8 @@ function chipHtml(n, where){
 }
 
 var posView = 'game';
+var delArmed = null;   // first tap arms the x, second removes the kid
+var endArmed = false;  // End game needs a second tap, PIN or no PIN
 function firstPosGame(){
   var g = season.filter(function(x){ return x.posSnaps && Object.keys(x.posSnaps).length; })
                 .sort(function(a,c){ return a.no - c.no; })[0];
@@ -1572,7 +1618,7 @@ function renderPosGrid(){
     } else {
       tot = total(n);
     }
-    return '<tr><td class="kid">' + n + (p.name ? ' ' + esc(p.name.trim().slice(0,4)) : '') + '</td>' +
+    return '<tr><td class="kid">' + n + (p.name ? ' ' + esc(p.name.trim()) : '') + '</td>' +
       '<td class="tot">' + (tot || '') + '</td>' + cells + '</tr>';
   }).join('');
   $('posGrid').innerHTML = '<table>' + head + rows + '</table>';
@@ -1581,13 +1627,14 @@ function renderPosGrid(){
   $('posMeta').textContent = seasonMode ? 'all games' : 'this game';
   var since = firstPosGame();
   $('posHint').textContent = seasonMode
-    ? (since ? 'Positions tracked since game ' + since + '. Offence spots only count on offence; S1 and S2 only on defence.'
+    ? (since ? 'Positions tracked since game ' + since + '. Offence spots only count on offence; S1 and S2 only on defense.'
              : 'No finished games with position data yet.')
     : 'Counted at the spot each kid was lined up at. Blank means none yet, which is fine.';
 }
-function nameOf(n){
+function nameOf(n, max){
   var p = S.roster.filter(function(r){ return r.num === n; })[0];
-  return p && p.name ? p.name.trim().slice(0,4) : '';
+  var nm = p && p.name ? p.name.trim() : '';
+  return max && nm.length > max ? nm.slice(0, max) : nm;
 }
 function renderSpots(){
   var rows = [['C','X','Y','Z'], ['R','Q']];
@@ -1599,10 +1646,11 @@ function renderSpots(){
         (n != null && pending.outL.indexOf(n) >= 0 ? ' swout' : '') +
         (n != null && n === sel.field ? ' pick' : '') +
         (sp === 'Q' && n != null && n === S.qbNow ? ' qbnowspot' : '');
+      var outNow = n != null && pending.outL.indexOf(n) >= 0;
       html += '<button class="' + cls + '" data-spot="' + sp + '">' +
-        '<u>' + sp + '</u>' +
+        '<u>' + sp + (n != null ? ' \u00b7 ' + total(n) : '') + '</u>' +
         (n == null ? '<b>&mdash;</b><i>open</i>'
-                   : '<b>' + n + '</b><i>' + esc(nameOf(n) || SPOT_NAME[sp]) + '</i>') +
+                   : '<b>' + n + '</b><i>' + (outNow ? 'OUT' : esc(nameOf(n) || SPOT_NAME[sp])) + '</i>') +
         '</button>';
     });
   });
@@ -1627,7 +1675,7 @@ function renderDeck(sg, due, canSwap){
     }
   }
   el.classList.remove('hide');
-  el.innerHTML = '<div class="deck"><b>On deck \u2014 next swap</b>' +
+  el.innerHTML = '<div class="deck"><b>Going in next</b>' +
     S.onDeck.map(function(d){
       return '<span>' + (nameOf(d.kid) ? esc(nameOf(d.kid)) + ' ' : '') + d.kid +
         ' \u2192 ' + d.spot + '</span>';
@@ -1660,6 +1708,9 @@ function render(){
   $('gameNo').textContent = 'Game ' + S.slot + ' of ' + S.weeks +
     (S.live ? '' : ' \u00b7 not started');
   $('btnEnd').classList.toggle('hide', !S.live);
+  $('btnEnd').textContent = endArmed ? 'Tap again to end' : 'End game';
+  $('btnEnd').style.borderColor = endArmed ? 'var(--warn)' : '';
+  $('btnEnd').style.color = endArmed ? 'var(--warn)' : '';
   $('preGame').classList.toggle('hide', S.live);
   $('liveGame').classList.toggle('hide', !S.live);
   $('dock').classList.toggle('hide', !S.live || currentTab !== 'tGame');
@@ -1673,7 +1724,7 @@ function render(){
 
     $('wizAtt').innerHTML = S.roster.map(function(p){
       var here = S.present.indexOf(p.num) >= 0;
-      var nm = p.name ? p.name.trim().slice(0,4) : '';
+      var nm = p.name ? p.name.trim() : '';
       return '<button class="chip' + (p.qb ? ' qb' : '') + '" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
         ';border-color:' + (here?'var(--ok)':'var(--line)') + '">' +
         (nm ? '<s>' + (here?'here':'out') + '</s>' : '') +
@@ -1687,7 +1738,7 @@ function render(){
     $('wizStart').innerHTML = order().map(function(n){
       var on = sel.start.indexOf(n) >= 0;
       var pn = S.roster.filter(function(r){ return r.num === n; })[0];
-      var nm = pn && pn.name ? pn.name.trim().slice(0,4) : '';
+      var nm = pn && pn.name ? pn.name.trim() : '';
       return '<button class="chip ' + (on?'pick':'') + (isQb(n) ? ' qb' : '') + '" data-st="' + n + '">' +
         (nm ? '<s>' + (on?'starts':'&nbsp;') + '</s>' : '') +
         '<b>' + n + '</b><i>' + esc(nm || (on?'starts':'\u00a0')) + '</i></button>';
@@ -1700,7 +1751,7 @@ function render(){
 
     $('wSubSize').textContent = S.subSize;
     $('wInterval').textContent = S.interval;
-    $('wTrigLabel').firstChild.nodeValue = S.trigger === 'plays' ? 'Swap every … plays' : 'Swap every … possessions';
+    $('wTrigLabel').firstChild.nodeValue = S.trigger === 'plays' ? 'Sub every … plays' : 'Sub every … possessions';
     $('wTrigSub').textContent = S.trigger === 'plays' ? 'Counts every snap you log'
       : 'Change of possession is the natural break';
     $('btnStartOff').classList.toggle('on', S.startSide !== 'defense');
@@ -1715,7 +1766,7 @@ function render(){
     } else {
       var cycle = Math.ceil(S.present.length / Math.max(1,S.subSize)) * S.interval;
       $('wizSummary').textContent = S.present.length + ' kids, ' + S.fieldSize +
-        ' on the field, ' + S.subSize + ' swapped every ' + S.interval + ' ' + uWord +
+        ' on the field, ' + S.subSize + ' subbed every ' + S.interval + ' ' + uWord +
         ' \u2014 everyone gets a turn about every ' + cycle + ' ' + uWord + '.';
     }
     $('step3').querySelectorAll('.set').forEach(function(el){
@@ -1727,8 +1778,8 @@ function render(){
   $('themScore').textContent = S.them;
 
   $('status').className = 'status ' + S.mode;
-  $('sideLabel').textContent = S.mode === 'offense' ? 'OFFENSE' : 'DEFENSE';
-  $('downNum').textContent = ORD[S.down-1];
+  $('sideLabel').textContent = S.mode === 'offense' ? 'WE HAVE IT' : 'THEY HAVE IT';
+  $('downNum').textContent = (S.pat || S.kickoff) ? '\u2014' : ORD[S.down-1];
   var left = S.interval - S.since;
   var unit = S.trigger === 'plays' ? 'play' : 'possession';
   $('sideSub').textContent = (S.pat ? 'extra point' : 'play ' + S.play) +
@@ -1743,7 +1794,7 @@ function render(){
         ? '<button class="big fill" id="btnCatch" style="margin-top:10px">Put ' +
           waiting.slice(0,6).join(', ') + ' in now</button>'
         : '<div class="cap" style="color:var(--warn)">' + (sList.length===1?'They\u2019re':'All are') +
-          ' on the field now \u2014 no action needed. They\u2019ll stay in at the next swap until they catch up.</div>') +
+          ' on the field now \u2014 no action needed. They\u2019ll stay in at the next sub until they catch up.</div>') +
       '</div></div>'
     : '';
 
@@ -1765,27 +1816,32 @@ function render(){
     $('cTitle').textContent = 'Everyone is playing';
     $('cSub').textContent = 'No bench today \u2014 nothing to rotate.';
   } else if (due){
-    $('cTitle').textContent = 'SWAP NOW';
+    $('cTitle').textContent = 'SUB NOW';
     $('cSub').textContent = S.since > S.interval
       ? (S.since - S.interval) + ' ' + (S.trigger==='plays'?'play':'possession') +
         (S.since - S.interval === 1 ? '' : 's') + ' past due'
       : 'Send in ' + pending.inL.join(', ') + '.';
   } else {
     $('cTitle').textContent = unit === 'play' ? 'Plays this rotation' : 'Possessions this rotation';
-    $('cSub').textContent = left + ' more, then swap ' + pending.inL.join(', ') + ' in.';
+    $('cSub').textContent = left + ' more, then sub in ' + pending.inL.join(', ') + ' in.';
   }
   var balanced = pending.inL.length > 0 && pending.inL.length === pending.outL.length;
   $('btnSub').disabled = !balanced;
-  $('btnSub').textContent = !canSwap ? 'Nobody available to swap'
+  $('btnSub').textContent = !canSwap ? 'Nobody left to sub'
     : !balanced && pending.inL.length > pending.outL.length
       ? 'Tap ' + (pending.inL.length - pending.outL.length) + ' on field to send out'
     : !balanced && pending.outL.length > pending.inL.length
       ? 'Tap ' + (pending.outL.length - pending.inL.length) + ' on bench to bring in'
-    : balanced ? 'Make these subs' : 'Tap players to swap';
+    : balanced ? 'Make these subs' : 'Tap kids to even it up';
   var resetLink = !pending.auto && sg.inL.length
     ? '<button class="cap" id="btnResetPending" style="color:var(--link);border:0;background:0;padding:14px 0;cursor:pointer;font:600 15px Barlow,sans-serif">Undo my changes</button>' : '';
+  // when the sub is due the button has to be where the alarm is, not below the fold
+  var top = $('btnSubTop');
+  top.classList.toggle('hide', !(due && canSwap));
+  top.textContent = $('btnSub').textContent;
+  top.disabled = $('btnSub').disabled;
   $('subExtra').innerHTML = (qbWarn && S.qbRule !== 'hard'
-    ? '<p class="hint warn" style="margin:9px 0 0">Heads up: after this swap nobody on the field is marked QB. ' +
+    ? '<p class="hint warn" style="margin:9px 0 0">Heads up: after this sub nobody on the field is marked QB. ' +
       'Tap a kid and a spot if you want to change it.</p>' : '') + resetLink;
 
   renderSpots();
@@ -1820,7 +1876,7 @@ function render(){
   if (showQb){
     $('qbChips').innerHTML = S.field.slice().sort(function(a,c){ return a-c; }).map(function(n){
       var pq = S.roster.filter(function(r){ return r.num === n; })[0];
-      var nm = pq && pq.name ? pq.name.trim().slice(0,4) : '';
+      var nm = pq && pq.name ? pq.name.trim() : '';
       return '<button class="chip' + (isQb(n) ? ' qb' : '') + (n === S.qbNow ? ' now' : '') +
         '" data-qbnow="' + n + '"><s>' + qbSnaps(n) + '</s><b>' + n + '</b><i>' +
         esc(nm || (n === S.qbNow ? 'qb' : '\u00a0')) + '</i></button>';
@@ -1837,17 +1893,22 @@ function render(){
     ? '4TH DOWN<small>what happened? pick below</small>'
     : S.pat
       ? 'EXTRA POINT<small>pick the result below</small>'
-      : 'PLAY RAN<small>' + (S.mode === 'offense' ? 'OFFENSE' : 'DEFENSE') + ' \u00b7 ' +
+      : S.kickoff
+        ? 'KICKOFF<small>tap below when the ball changes hands</small>'
+      : 'SNAP<small>' + (S.mode === 'offense' ? 'OFFENSE' : 'DEFENSE') + ' \u00b7 ' +
         ORD[S.down-1] + ' down</small>';
-  $('btnSnap').disabled = S.pat || ask4;
-  $('normalRow').classList.toggle('hide', S.pat || ask4);
+  $('btnSnap').disabled = S.pat || ask4 || S.kickoff;
+  $('normalRow').classList.toggle('hide', S.pat || ask4 || S.kickoff);
   $('patRow').classList.toggle('hide', !S.pat);
+  $('kickRow').classList.toggle('hide', !S.kickoff);
+  if (S.kickoff) $('kickSub').textContent = S.mode === 'offense'
+    ? 'we scored \u2014 they get the ball' : 'they scored \u2014 we get the ball';
   $('fourthRow').classList.toggle('hide', !ask4);
   var qbBtn = $('btnQbNow');
   if (S.mode === 'offense' && S.qbNow != null){
     var qp = S.roster.filter(function(r){ return r.num === S.qbNow; })[0];
     qbBtn.textContent = 'QB NOW \u00b7 ' + S.qbNow +
-      (qp && qp.name ? ' ' + qp.name.trim().slice(0,4).toUpperCase() : '');
+      (qp && qp.name ? ' ' + qp.name.trim().toUpperCase() : '');
     qbBtn.classList.remove('hide');
     qbBtn.disabled = eligibleQbs().length < 2;
   } else {
@@ -1866,8 +1927,12 @@ function render(){
       return total(a.num)-total(c.num) || a.num-c.num; }).map(function(p){
     var st = S.stats[p.num] || {off:0,def:0}, t = st.off+st.def;
     var here = S.present.indexOf(p.num) >= 0, bb = behindBy(p.num);
+    var ranked = S.present.slice().sort(function(a,c){ return total(c)-total(a) || a-c; });
+    var rank = ranked.indexOf(p.num) + 1;
     var status = !here ? 'not here today'
-      : (S.play === 0 ? 'no plays yet' : (bb === 0 ? 'most plays on the team' : bb + ' behind the leader'));
+      : (S.play === 0 ? 'no plays yet'
+        : rank + (rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th') +
+          ' most plays of ' + S.present.length);
     return '<div class="row ' + (here?'':'out') + '"><p class="rn">' + p.num + '</p>' +
       '<div><div class="bar"><u class="bo" style="width:' + (st.off/max*100) + '%"></u>' +
       '<u class="bd" style="width:' + (st.def/max*100) + '%"></u></div>' +
@@ -1881,7 +1946,7 @@ function render(){
     var here = S.present.indexOf(p.num) >= 0;
     var lvl = qbLevel(p.num);
     return '<button class="prow att' + (here ? ' here' : ' away') + '" data-att="' + p.num + '">' +
-      '<b>' + p.num + '</b><span>' + esc(p.name ? p.name.trim().slice(0,4) : '') + '</span>' +
+      '<b>' + p.num + '</b><span>' + esc(p.name ? p.name.trim() : '') + '</span>' +
       (lvl ? '<em class="tag' + (lvl === 'main' ? ' main' : '') + '">' +
         (lvl === 'main' ? 'QB' : 'QB?') + '</em>' : '') +
       '<i>' + (here ? 'here' : 'out') + '</i></button>';
@@ -1890,12 +1955,16 @@ function render(){
   $('hereMeta').textContent = S.present.length + ' of ' + S.roster.length;
 
   $('names').innerHTML = S.roster.map(function(p){
-    return '<div class="set"><p class="rn" style="width:44px">' + p.num + '</p>' +
+    return '<div class="set nameset">' +
+      '<input class="numin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" ' +
+      'data-num="' + p.num + '" value="' + p.num + '">' +
       '<input type="text" data-name="' + p.num + '" value="' +
-      esc(p.name||'') + '" maxlength="4" placeholder="3 letters, e.g. MKE">' +
+      esc(p.name||'') + '" maxlength="14" placeholder="First name">' +
       '<button class="qbtog' + (p.qb === 'main' ? ' on' : (p.qb === 'sometimes' ? ' some' : '')) +
       '" data-qb="' + p.num + '">' +
-      (p.qb === 'main' ? 'QB' : (p.qb === 'sometimes' ? 'QB?' : '\u2014')) + '</button></div>';
+      (p.qb === 'main' ? 'QB' : (p.qb === 'sometimes' ? 'QB?' : '\u2014')) + '</button>' +
+      '<button class="delkid' + (delArmed === p.num ? ' armed' : '') + '" data-del="' + p.num + '">' +
+      (delArmed === p.num ? 'Remove?' : '\u00d7') + '</button></div>';
   }).join('');
   var nq = S.present.filter(isMainQb).length;
   $('qbMeta').textContent = nq + ' main, ' + S.present.filter(isSometimesQb).length +
@@ -1904,7 +1973,7 @@ function render(){
     ? 'Mark the kids who can throw. It only guides the auto-subs \u2014 you can still hand the ball to anyone.'
     : nq === 1
       ? 'Only one marked here, so the auto-subs will keep that kid on the field almost every play. Mark a second if you can.'
-      : 'Tap to cycle: QB (main) \u2192 QB? (sometimes, one block a game) \u2192 \u2014 (not a QB). Who actually takes the snaps is the QB row on the game screen, and can be anyone.';
+      : 'Tap to cycle: QB (main) \u2192 QB? (sometimes, one series a game) \u2192 \u2014 (not a QB). Who actually takes the snaps is the QB row on the game screen, and can be anyone.';
   $('qbHint').className = nq === 1 ? 'hint warn' : 'hint';
 
   /* setup tab */
@@ -1924,7 +1993,7 @@ function render(){
   $('gapSub').textContent = gapLimit() > S.gapLimit
     ? 'Rotation alone puts kids ' + (naturalGap()-2) + ' behind, so this flags at ' + gapLimit()
     : 'Compared to whoever has played most';
-  $('trigLabel').firstChild.nodeValue = S.trigger === 'plays' ? 'Swap every … plays' : 'Swap every … possessions';
+  $('trigLabel').firstChild.nodeValue = S.trigger === 'plays' ? 'Sub every … plays' : 'Sub every … possessions';
   $('trigSub').textContent = S.trigger === 'plays' ? 'Counts every snap you log'
     : 'Change of possession is the natural break';
   $('rotSub').textContent = S.rotation === 'sequence' ? 'Next numbers up, wrapping around'
@@ -2079,6 +2148,22 @@ document.addEventListener('click', function(e){
     S.qbNow = +t.dataset.qbnow;
     save(); return render();
   }
+  if (t.dataset.del){
+    var dn = +t.dataset.del;
+    if (total(dn) > 0 && S.live){
+      $('qbHint').textContent = 'Number ' + dn + ' has played in this game. End the game first.';
+      $('qbHint').className = 'hint warn';
+      return render();
+    }
+    if (delArmed !== dn){ delArmed = dn; return render(); }
+    snapshot('undo remove kid');
+    delArmed = null;
+    S.roster = S.roster.filter(function(r){ return r.num !== dn; });
+    S.present = S.present.filter(function(x){ return x !== dn; });
+    S.field = S.field.filter(function(x){ return x !== dn; });
+    for (var sp2 in S.spots) if (S.spots[sp2] === dn) S.spots[sp2] = null;
+    save(); return render();
+  }
   if (t.dataset.qb){
     var qn = +t.dataset.qb;
     var qp = S.roster.filter(function(r){ return r.num === qn; })[0];
@@ -2154,6 +2239,10 @@ document.addEventListener('click', function(e){
     case 'btnQbHard':    S.qbRule = 'hard'; save(); return render();
     case 'btnSafeOn':    S.trackSafeties = true; save(); return render();
     case 'btnSafeOff':   S.trackSafeties = false; save(); return render();
+    case 'btnSubTop':   return doSub(pending.inL.length ? pending.inL : suggest().inL,
+                                     pending.outL.length ? pending.outL : suggest().outL);
+    case 'btnKick':     return doKickoff();
+    case 'btnUndoKick': return undo();
     case 'btnUndoPat': return undo();
     case 'btnQbNow': snapshot('undo QB change'); nextQb(); render(); save(); return;
     case 'btnSnap':  return runPlay('play');
@@ -2181,7 +2270,11 @@ document.addEventListener('click', function(e){
     case 'btnTrigPlay2':  snapshot(); S.trigger = 'plays';       render(); save(); return;
     case 'btnTrigPoss2':  snapshot(); S.trigger = 'possessions'; render(); save(); return;
     case 'btnStart': return guard('to start game ' + S.slot, startGame);
-    case 'btnEnd':   return guard('to end game ' + S.slot, endGame);
+    case 'btnEnd':
+      if (!endArmed){ endArmed = true; render();
+        setTimeout(function(){ endArmed = false; render(); }, 4000); return; }
+      endArmed = false;
+      return guard('to end game ' + S.slot, endGame);
     case 'btnSub': {
       var k = Math.min(pending.inL.length, pending.outL.length);
       if (!k) return;
@@ -2245,6 +2338,18 @@ document.addEventListener('input', function(e){
     S.roster.forEach(function(x){ if (x.num === +e.target.dataset.name) p = x; });
     if (p){ p.name = e.target.value; save(); }
   }
+  if (e.target.dataset.num){
+    var oldN = +e.target.dataset.num, newN = parseInt(e.target.value, 10);
+    if (!newN || newN < 0 || newN > 99 || newN === oldN) return;
+    if (S.roster.some(function(r){ return r.num === newN; })){
+      e.target.value = oldN;
+      $('qbHint').textContent = 'Number ' + newN + ' is already taken.';
+      $('qbHint').className = 'hint warn';
+      return;
+    }
+    renumber(oldN, newN);
+    save(); render(); return;
+  }
   if (e.target.id === 'teamInput'){ S.team = e.target.value; $('teamName').textContent = S.team || 'Tap Setup to name your team'; save(); }
   if (e.target.id === 'resetConfirm'){
     $('btnResetGo').disabled = e.target.value !== 'RESET';
@@ -2306,10 +2411,10 @@ function resetEverything(){
   S = {
     team:'', roster:[], present:[], field:[], stats:{}, entry:{}, exit:{}, qbs:{}, qbNow:null, tick:0,
     starters:[], started:null, live:false,
-    startSide:'offense', half:1, halfLen:25, clock:null,
+    startSide:'offense', half:1, halfLen:25, clock:null, kickoff:false,
     spots:{}, posSnaps:{}, safeties:{S1:null,S2:null}, onDeck:null, qbTurnUsed:{},
     qLast:null, qHeld:0,
-    posMode:'least', sometimesTurns:1, trackSafeties:true, qbRule:'soft',
+    posMode:'same', sometimesTurns:1, trackSafeties:false, qbRule:'soft',
     fieldSize:6, subSize:3, interval:4, trigger:'plays', rotation:'sequence', gapLimit:6,
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
     weeks:8, slot:1, pin:''
@@ -2346,7 +2451,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v29';
+var APP_VERSION = 'v30';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
