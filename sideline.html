@@ -123,6 +123,11 @@
   .spotgrid .spot.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
   .spotgrid .spot.swout{border-color:var(--warn); background:rgba(255,107,74,.18);}
   .spotgrid .spot.qbnowspot{border-color:var(--off);}
+  .diff{border:2px solid var(--line); background:var(--panel2); border-radius:12px;
+        padding:8px 11px; margin-bottom:10px;}
+  .diff b{font:700 12px 'Barlow',sans-serif; color:var(--muted); letter-spacing:.06em;
+          text-transform:uppercase; display:block; margin-bottom:3px;}
+  .diff span{display:block; font:600 14.5px 'Barlow',sans-serif; color:var(--text);}
   .deck{border:2px solid var(--ok); background:rgba(95,217,122,.12); border-radius:12px;
         padding:9px 11px; margin-bottom:10px;}
   .deck b{font:700 15px 'Barlow',sans-serif; color:var(--ok); display:block; margin-bottom:3px;}
@@ -418,6 +423,7 @@
             <div class="csub" id="cSub"></div></div>
         </div>
         <div id="deckStrip" class="hide"></div>
+        <div id="subDiff" class="hide"></div>
         <button class="big fill hide" id="btnSubTop" style="margin-bottom:12px"></button>
         <h2>On field <em id="fieldMeta"></em></h2>
         <div class="spotgrid" id="spotGrid"></div>
@@ -672,7 +678,7 @@ var S = {
   startSide: 'offense', half: 1, halfLen: 25, clock: null, kickoff: false,
   spots: {}, posSnaps: {}, safeties: {S1:null, S2:null}, onDeck: null, qbTurnUsed: {},
   qLast: null, qHeld: 0,
-  posMode: 'same', sometimesTurns: 1, trackSafeties: false, qbRule: 'soft',
+  posMode: 'least', sometimesTurns: 1, trackSafeties: false, qbRule: 'soft',
   fieldSize: 6, subSize: 3, interval: 4, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
   weeks: 8, slot: 1, pin: ''
@@ -765,7 +771,7 @@ function load(){
     if (!S.posSnaps) S.posSnaps = {};
     if (!S.safeties) S.safeties = {S1:null, S2:null};
     if (!S.qbTurnUsed) S.qbTurnUsed = {};
-    if (S.posMode == null) S.posMode = 'same';
+    if (S.posMode == null) S.posMode = 'least';
     if (S.sometimesTurns == null) S.sometimesTurns = 1;
     if (S.trackSafeties == null) S.trackSafeties = false;
     if (S.qbRule == null) S.qbRule = 'soft';
@@ -1156,6 +1162,8 @@ function keepQb(inL, outL){
 function doSub(inL, outL){
   if (!inL.length || !outL.length) return;
   snapshot('undo subs');
+  var movedBefore = S.field.filter(function(n){ return outL.indexOf(n) < 0; })
+    .map(function(n){ return {num:n, spot:spotOf(n)}; });
   var freed = outL.map(spotOf).filter(function(k){ return k; });
   outL.forEach(function(n){ var k = spotOf(n); if (k) S.spots[k] = null; });
   S.field = S.field.filter(function(n){ return outL.indexOf(n) < 0; }).concat(inL);
@@ -1181,6 +1189,15 @@ function doSub(inL, outL){
   S.onDeck = null;
   rebalanceQ();
   pickQb();
+  // Say exactly what just changed, so the line-up never moves unexplained.
+  S.lastSub = {
+    out: outL.slice().sort(function(a,c){ return a-c; }),
+    inAt: OFF_SPOTS.filter(function(sp){ return inL.indexOf(S.spots[sp]) >= 0; })
+      .map(function(sp){ return {num: S.spots[sp], spot: sp}; }),
+    moved: movedBefore.filter(function(m){ return spotOf(m.num) !== m.spot; })
+      .map(function(m){ return {num: m.num, from: m.spot, to: spotOf(m.num)}; }),
+    at: S.play
+  };
   S.since = 0; sel = {field:null, bench:null, safety:null, start:sel.start};
   pending = { inL: [], outL: [], auto: true };
   blink(); render(); save();
@@ -1636,6 +1653,19 @@ function nameOf(n, max){
   var nm = p && p.name ? p.name.trim() : '';
   return max && nm.length > max ? nm.slice(0, max) : nm;
 }
+function renderSubDiff(){
+  var el = $('subDiff'), d = S.lastSub;
+  // keep it up for the next couple of snaps, then get out of the way
+  if (!d || !S.live || S.play - d.at > 2){ el.classList.add('hide'); el.innerHTML = ''; return; }
+  function tag(n){ return (nameOf(n) ? esc(nameOf(n)) + ' ' : '') + n; }
+  el.classList.remove('hide');
+  el.innerHTML = '<div class="diff"><b>Just subbed</b>' +
+    '<span>OFF: ' + d.out.map(tag).join(', ') + '</span>' +
+    '<span>ON: ' + d.inAt.map(function(x){ return tag(x.num) + ' \u2192 ' + x.spot; }).join(', ') + '</span>' +
+    (d.moved.length ? '<span>MOVED: ' + d.moved.map(function(m){
+      return tag(m.num) + ' ' + m.from + ' \u2192 ' + m.to; }).join(', ') + '</span>' : '') +
+    '</div>';
+}
 function renderSpots(){
   var rows = [['C','X','Y','Z'], ['R','Q']];
   var html = '';
@@ -1844,6 +1874,7 @@ function render(){
     ? '<p class="hint warn" style="margin:9px 0 0">Heads up: after this sub nobody on the field is marked QB. ' +
       'Tap a kid and a spot if you want to change it.</p>' : '') + resetLink;
 
+  renderSubDiff();
   renderSpots();
   renderDeck(sg, due, canSwap);
   renderSafeties();
@@ -2414,7 +2445,7 @@ function resetEverything(){
     startSide:'offense', half:1, halfLen:25, clock:null, kickoff:false,
     spots:{}, posSnaps:{}, safeties:{S1:null,S2:null}, onDeck:null, qbTurnUsed:{},
     qLast:null, qHeld:0,
-    posMode:'same', sometimesTurns:1, trackSafeties:false, qbRule:'soft',
+    posMode:'least', sometimesTurns:1, trackSafeties:false, qbRule:'soft',
     fieldSize:6, subSize:3, interval:4, trigger:'plays', rotation:'sequence', gapLimit:6,
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
     weeks:8, slot:1, pin:''
