@@ -141,15 +141,16 @@
   .prow.short i{color:var(--warn);}
   .prow.att.here{border-color:var(--ok);}
   .prow.att.here i{color:var(--ok); font:700 12px 'Barlow',sans-serif; letter-spacing:.05em;}
-  .prow.att.away{opacity:.45;}
-  .prow.att.away i{font:700 12px 'Barlow',sans-serif; letter-spacing:.05em; color:var(--muted);}
+  .prow.att.away{background:transparent; border-color:#2A333E;}
+  .prow.att.away b,.prow.att.away span{color:#7D8C9E;}
+  .prow.att.away i{font:700 12px 'Barlow',sans-serif; letter-spacing:.05em; color:#93A3B5;}
   .posgrid{overflow-x:auto;}
   .posgrid table{border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums;}
   .posgrid th,.posgrid td{padding:5px 4px; text-align:center; font:600 13px 'Barlow',sans-serif;
                           border-bottom:1px solid var(--line); white-space:nowrap;}
   .posgrid th{color:var(--muted); font-size:11.5px; letter-spacing:.04em; text-transform:uppercase;}
   .posgrid td.kid,.posgrid th.kid{text-align:left; font-weight:700;}
-  .posgrid td.zero{color:#3C4A5A;}
+  .posgrid td.zero{color:#6B7A8C;}
   .posgrid td.tot{font-weight:700;}
   .clockrow{display:flex; align-items:center; gap:10px;}
   .clockrow b{font:700 42px 'Barlow Condensed',sans-serif; line-height:1; flex:1;
@@ -273,6 +274,7 @@
   .snap[data-m=offense]{background:var(--off);} .snap[data-m=defense]{background:var(--def);}
     .snap small{display:block; font:600 13px 'Barlow',sans-serif; opacity:.72; letter-spacing:0; margin-top:3px;}
   .snap:active{filter:brightness(.85);}
+  .snap:disabled{background:var(--panel2) !important; color:var(--muted); box-shadow:none;}
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:7px;}
   .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-top:7px;}
   .grid2 button,.grid3 button{border:2px solid var(--line); background:var(--panel); color:var(--text);
@@ -393,7 +395,7 @@
 
     <div class="card hide" id="firstRun" style="border-color:var(--ok)">
       <h2>First time here</h2>
-      <p class="hint" style="margin:0 0 10px">Two minutes of setup makes the rest easier: your team name, the kids\u2019 numbers and names, and who can play QB. You can skip and do it later \u2014 the app works with numbers alone.</p>
+      <p class="hint" style="margin:0 0 10px">Two minutes of setup makes the rest easier: your team name, the kids&rsquo; numbers and names, and who can play QB. You can skip and do it later &mdash; the app works with numbers alone.</p>
       <button class="big fill" id="btnDoSetup">Set up my team</button>
       <button class="big outline" id="btnSkipSetup" style="margin-top:8px">Skip for now</button>
     </div>
@@ -419,11 +421,11 @@
           <div class="chips qbpick" id="qbChips"></div>
         </div>
         <h2 style="margin:14px 0 9px">Bench <em id="benchMeta"></em></h2>
-        <p class="hint" style="margin:0 0 7px">Fewest plays first \u2014 top of the list needs reps.</p>
+        <p class="hint" style="margin:0 0 7px">Fewest plays first &mdash; these kids need reps.</p>
         <div class="chips bench" id="benchChips"></div>
         <button class="big fill" id="btnSub" style="margin-top:12px">Make these subs</button>
         <div id="subExtra"></div>
-        <p class="hint">Tap players to change the swap. Match the same number in and out.</p>
+        <p class="hint">Same number in and out.</p>
       </div>
 
       <div class="card">
@@ -1612,7 +1614,7 @@ function renderSpots(){
 function renderDeck(sg, due, canSwap){
   var el = $('deckStrip');
   var oneAway = S.live && canSwap && sg.inL.length &&
-                (S.interval - S.since) <= 1 && !due;
+                (S.interval - S.since) <= 1;
   if (!oneAway){ el.classList.add('hide'); el.innerHTML = ''; return; }
   if (!S.onDeck){
     var freed = sg.outL.map(spotOf).filter(function(k){ return k; });
@@ -1793,7 +1795,7 @@ function render(){
   $('benchChips').innerHTML = benchSorted.map(function(n){
     var inSwap = pending.inL.indexOf(n) >= 0;
     var lvl = qbLevel(n);
-    return '<button class="prow' + (inSwap ? ' in' : '') + (short(n) ? ' short' : '') +
+    return '<button class="prow' + (inSwap || sel.bench === n ? ' in' : '') + (short(n) ? ' short' : '') +
       '" data-n="' + n + '" data-w="bench">' +
       '<b>' + n + '</b><span>' + esc(nameOf(n) || '') + '</span>' +
       (lvl ? '<em class="tag' + (lvl === 'main' ? ' main' : '') + '">' +
@@ -1825,7 +1827,6 @@ function render(){
     }).join('');
     $('qbRowMeta').textContent = 'tap to change \u00b7 number = snaps at QB';
   }
-  $('fieldMeta').textContent = S.field.length + ' of ' + S.fieldSize;
   $('benchMeta').textContent = b.length + ' waiting';
 
   /* dock */
@@ -1834,7 +1835,10 @@ function render(){
   if (S.pat || S.down < 4) ask4 = false;
   $('btnSnap').innerHTML = ask4
     ? '4TH DOWN<small>what happened? pick below</small>'
-    : 'PLAY RAN<small>' + ORD[S.down-1] + ' down \u00b7 tap after every snap</small>';
+    : S.pat
+      ? 'EXTRA POINT<small>pick the result below</small>'
+      : 'PLAY RAN<small>' + (S.mode === 'offense' ? 'OFFENSE' : 'DEFENSE') + ' \u00b7 ' +
+        ORD[S.down-1] + ' down</small>';
   $('btnSnap').disabled = S.pat || ask4;
   $('normalRow').classList.toggle('hide', S.pat || ask4);
   $('patRow').classList.toggle('hide', !S.pat);
@@ -2049,7 +2053,7 @@ document.addEventListener('click', function(e){
   }
   if (t.dataset.n){
     var w = t.dataset.w, n = +t.dataset.n;
-    if (w === 'bench' && sel.safety){
+    if (sel.safety){
       snapshot('undo safety');
       S.safeties[sel.safety] = n; sel.safety = null;
       save(); return render();
@@ -2342,7 +2346,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v28';
+var APP_VERSION = 'v29';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
