@@ -123,6 +123,13 @@
   .spotgrid .spot.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
   .spotgrid .spot.swout{border-color:var(--warn); background:rgba(255,107,74,.18);}
   .spotgrid .spot.qbnowspot{border-color:var(--off);}
+  .selbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap; border:2px solid var(--text);
+          border-radius:12px; padding:8px 10px; margin-bottom:10px; background:var(--panel2);}
+  .selbar b{font:700 16px 'Barlow',sans-serif;}
+  .selbar button{min-height:40px; padding:0 13px; border-radius:10px; cursor:pointer;
+                 border:2px solid var(--line); background:var(--panel); color:var(--text);
+                 font:600 14px 'Barlow',sans-serif;}
+  .selbar span{flex-basis:100%; font-size:13px; color:var(--muted);}
   .diff{border:2px solid var(--line); background:var(--panel2); border-radius:12px;
         padding:8px 11px; margin-bottom:10px;}
   .diff b{font:700 12px 'Barlow',sans-serif; color:var(--muted); letter-spacing:.06em;
@@ -425,6 +432,7 @@
         <div id="deckStrip" class="hide"></div>
         <div id="subDiff" class="hide"></div>
         <button class="big fill hide" id="btnSubTop" style="margin-bottom:12px"></button>
+        <div id="selBar" class="hide"></div>
         <h2>On field <em id="fieldMeta"></em></h2>
         <div class="spotgrid" id="spotGrid"></div>
         <div id="safetyRow" class="hide">
@@ -533,6 +541,10 @@
       <div class="set">
         <p>Sometimes-QB series a game<em>One series at QB for each QB? kid</em></p>
         <div class="step"><button data-s="sometimesTurns" data-d="-1">&minus;</button><b id="vSomeTurns"></b><button data-s="sometimesTurns" data-d="1">+</button></div>
+      </div>
+      <div class="set">
+        <p>Half length<em>Minutes, for the clock only</em></p>
+        <div class="step"><button data-s="halfLen" data-d="-1">&minus;</button><b id="vHalfLen"></b><button data-s="halfLen" data-d="1">+</button></div>
       </div>
       <div class="set">
         <p>QB rule<em>Soft just warns; hard changes who subs to keep a QB on</em></p>
@@ -685,7 +697,7 @@ var S = {
 };
 var season = [], undoStack = [], lastAction = '', sel = {field:null, bench:null, safety:null, start:[]};
 var pending = { inL: [], outL: [], auto: true };
-var LIM = { weeks:[1,20], subSize:[1,6], interval:[1,12], gapLimit:[2,20], sometimesTurns:[0,3] };
+var LIM = { weeks:[1,20], subSize:[1,6], interval:[1,12], gapLimit:[2,20], sometimesTurns:[0,3], halfLen:[5,40] };
 var ORD = ['1st','2nd','3rd','4th'];
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -722,13 +734,13 @@ function showBrowserWarning(){
   b.appendChild(x);
   document.body.insertBefore(b, document.body.firstChild);
 }
-function showStorageWarning(){
+function showStorageWarning(msg){
   if (document.getElementById('storageBanner')) return;
   var b = document.createElement('div');
   b.id = 'storageBanner';
   b.style.cssText = 'position:relative;z-index:21;background:#c0392b;color:#fff;' +
     'padding:calc(8px + env(safe-area-inset-top)) 40px 8px 16px;font:600 14px/1.3 Barlow,sans-serif;text-align:center;';
-  b.textContent = 'Your game won\u2019t be saved. Close this tab, open a regular Safari tab (not Private), and come back.';
+  b.textContent = msg || 'Your game won\u2019t be saved. Close this tab, open a regular Safari tab (not Private), and come back.';
   var x = document.createElement('button');
   x.textContent = '\u00d7';
   x.style.cssText = 'position:absolute;top:calc(4px + env(safe-area-inset-top));right:8px;background:none;border:0;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;';
@@ -738,12 +750,21 @@ function showStorageWarning(){
 }
 function save(){ put('fb:state', S); }
 function saveSeason(){ put('fb:season', season); }
+var loadBroke = false;
 function grab(k){
   return Promise.resolve().then(function(){
     // try localStorage first
     var raw = null;
     try{ raw = localStorage.getItem(k); }catch(e){}
-    if (raw !== null) return JSON.parse(raw);
+    if (raw !== null){
+      try{ return JSON.parse(raw); }
+      catch(e){
+        // keep the damaged record so nothing overwrites it, and say so
+        loadBroke = true;
+        try{ localStorage.setItem(k + ':broken', raw); }catch(e2){}
+        return null;
+      }
+    }
     // fall back to window.storage (Claude artifact sandbox)
     if (window.storage && typeof window.storage.get === 'function'){
       return window.storage.get(k).then(function(r){
@@ -754,6 +775,33 @@ function grab(k){
   }).catch(function(){ return null; });
 }
 
+// Everything a loaded or imported state needs before it can be rendered safely.
+function repairState(){
+  if (!S.roster) S.roster = [];
+  S.roster.forEach(function(p){ if (p.qb === true) p.qb = 'main'; });
+  if (!S.present) S.present = [];
+  if (!S.field) S.field = [];
+  if (!S.stats) S.stats = {};
+  if (!S.entry) S.entry = {};
+  if (!S.exit) S.exit = {};
+  if (!S.qbs) S.qbs = {};
+  if (!S.spots) S.spots = {};
+  if (!S.posSnaps) S.posSnaps = {};
+  if (!S.safeties) S.safeties = {S1:null, S2:null};
+  if (!S.qbTurnUsed) S.qbTurnUsed = {};
+  if (S.posMode == null) S.posMode = 'least';
+  if (S.sometimesTurns == null) S.sometimesTurns = 1;
+  if (S.trackSafeties == null) S.trackSafeties = false;
+  if (S.qbRule == null) S.qbRule = 'soft';
+  if (!S.down || S.down < 1 || S.down > 4) S.down = 1;
+  if (S.mode !== 'defense') S.mode = 'offense';
+  S.present = S.present.filter(function(n){
+    return S.roster.some(function(p){ return p.num === n; }); });
+  S.field = S.field.filter(function(n){ return S.present.indexOf(n) >= 0; });
+  DEF_SPOTS.forEach(function(sp){
+    if (S.safeties[sp] != null && S.field.indexOf(S.safeties[sp]) < 0) S.safeties[sp] = null; });
+  syncSpots();
+}
 function load(){
   return Promise.all([grab('fb:state'), grab('fb:season')]).then(function(res){
     if (res[0]) { for (var k in res[0]) S[k] = res[0][k]; }
@@ -785,6 +833,8 @@ function load(){
     }
     syncSpots();
     showBrowserWarning();
+    if (loadBroke) showStorageWarning('Some saved data on this phone was damaged and could not be read. ' +
+      'A copy was kept. Restore from a backup if a game is missing.');
     if (!S.slot || (!S.live && gameByNo(S.slot))) S.slot = nextOpenSlot();
     checkIncomingLink();
     render();
@@ -1048,6 +1098,11 @@ function gameByNo(n){
   for (var i=0;i<season.length;i++) if (season[i].no === n) return season[i];
   return null;
 }
+function nextFreeNo(){
+  var n = 1;
+  while (season.some(function(g){ return g.no === n; })) n++;
+  return n;
+}
 function nextOpenSlot(){
   for (var n=1; n<=S.weeks; n++) if (!gameByNo(n)) return n;
   return S.weeks;
@@ -1205,6 +1260,7 @@ function doSub(inL, outL){
 
 function fillField(){
   var guard = 0;
+  syncSpots();
   while (S.field.length < S.fieldSize && bench().length && guard++ < 40){
     var b = bench(), pick = null;
     var needQb = qbsPresent().length && !hasQb(S.field) &&
@@ -1218,6 +1274,7 @@ function fillField(){
   while (S.field.length > S.fieldSize){
     var drop = S.field.slice().sort(function(a,c){ return (S.entry[a]||0)-(S.entry[c]||0); })[0];
     S.field = S.field.filter(function(x){ return x !== drop; });
+    var ds = spotOf(drop); if (ds) S.spots[ds] = null;
     release([drop]);
   }
 }
@@ -1303,7 +1360,9 @@ function clockMs(){
 }
 function clockLeft(){
   var c = S.clock; if (!c) return 0;
-  return Math.max(0, (c.len || 1500000) - clockMs());
+  var left = Math.max(0, (c.len || 1500000) - clockMs());
+  if (left === 0 && c.run){ c.acc = c.len || 1500000; c.run = false; c.at = 0; }
+  return left;
 }
 function clockText(){
   var ms = clockLeft(), m = Math.floor(ms/60000), ss = Math.floor((ms%60000)/1000);
@@ -1345,10 +1404,10 @@ function startGame(){
   setStarters(picks.length === S.fieldSize ? picks.slice().sort(function(a,c){return a-c;}) : randomStart());
 }
 function endGame(){
-  if (S.play){
+  if (S.play || S.us || S.them){
     season.unshift({
       id: Date.now(), date: S.started || new Date().toISOString(),
-      no: S.slot, team: S.team,
+      no: season.some(function(g){ return g.no === S.slot; }) ? nextFreeNo() : S.slot, team: S.team,
       plays: S.play, us: S.us, them: S.them,
       starters: S.starters.slice(),
       stats: JSON.parse(JSON.stringify(S.stats)),
@@ -1377,11 +1436,16 @@ function endGame(){
 
 /* ---------- handoff ---------- */
 function pack(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+function shareState(){
+  var copy = JSON.parse(JSON.stringify(S));
+  delete copy.pin;                 // the other phone keeps its own code
+  return copy;
+}
 function encodeState(){
   // try to carry the season history too, but keep the link textable
-  var full = pack({S:S, season:season});
+  var full = pack({S:shareState(), season:season});
   if (full.length < 1700) return {code:full, withHistory:true};
-  return {code: pack({S:S}), withHistory:false};
+  return {code: pack({S:shareState()}), withHistory:false};
 }
 function decodeState(code){
   var json = decodeURIComponent(escape(atob(code)));
@@ -1409,10 +1473,14 @@ function applyIncoming(raw, note){
   var code = raw.trim();
   var hash = code.indexOf('#g=');
   if (hash >= 0) code = code.slice(hash + 3);
+  var before = JSON.stringify(S), beforeSeason = JSON.stringify(season);
   try{
     var p = decodeState(code);
-    if (!p || !p.S || !p.S.roster) throw new Error('bad');
+    if (!p || !p.S || !p.S.roster || !p.S.roster.length) throw new Error('bad');
+    var myPin = S.pin;
     for (var k in p.S) S[k] = p.S[k];
+    S.pin = myPin;                       // never take over the other phone's code
+    repairState();
     if (p.season && p.season.length){
       // union by game id so neither phone loses saved games
       var seen = {};
@@ -1422,20 +1490,34 @@ function applyIncoming(raw, note){
     }
     undoStack = []; sel = {field:null, bench:null, safety:null, start:[]};
     pending = { inL: [], outL: [], auto: true };
-    save(); saveSeason(); render();
+    render();                            // prove it renders before it is persisted
+    save(); saveSeason();
     if (note) $(note).textContent = 'Loaded. You have the game — game ' + gameNumber() +
       ', ' + S.us + '\u2013' + S.them + ', play ' + S.play + '.';
     return true;
   }catch(e){
-    if (note) $(note).textContent = 'That code didn\u2019t read. Copy the whole link and try again.';
+    try{
+      var old = JSON.parse(before);
+      for (var k2 in S) delete S[k2];
+      for (var k3 in old) S[k3] = old[k3];
+      season = JSON.parse(beforeSeason);
+      render();
+    }catch(e2){}
+    if (note) $(note).textContent = 'That code didn\u2019t read. Copy the whole link and try again. ' +
+      'Your game is untouched.';
     return false;
   }
 }
 function checkIncomingLink(){
   var h = location.hash || '';
   if (h.indexOf('#g=') !== 0) return;
-  var ok = applyIncoming(h);
-  if (ok) { try{ history.replaceState(null,'',location.href.split('#')[0]); }catch(e){} }
+  pendingLink = h;
+  try{ history.replaceState(null,'',location.href.split('#')[0]); }catch(e){}
+  $('takeoverBox').classList.remove('hide');
+  $('takeoverText').value = h;
+  $('takeoverNote').textContent = 'A game came in from another coach. Taking it over replaces ' +
+    'the game on this phone. Tap "Take over the game" if that is what you want.';
+  switchTab('tSetup');
 }
 
 /* ---------- export ---------- */
@@ -1605,6 +1687,7 @@ function chipHtml(n, where){
 }
 
 var posView = 'game';
+var pendingLink = null;
 var delArmed = null;   // first tap arms the x, second removes the kid
 var endArmed = false;  // End game needs a second tap, PIN or no PIN
 function firstPosGame(){
@@ -1635,7 +1718,7 @@ function renderPosGrid(){
     } else {
       tot = total(n);
     }
-    return '<tr><td class="kid">' + n + (p.name ? ' ' + esc(p.name.trim()) : '') + '</td>' +
+    return '<tr><td class="kid">' + (+n) + (p.name ? ' ' + esc(p.name.trim()) : '') + '</td>' +
       '<td class="tot">' + (tot || '') + '</td>' + cells + '</tr>';
   }).join('');
   $('posGrid').innerHTML = '<table>' + head + rows + '</table>';
@@ -1666,6 +1749,16 @@ function renderSubDiff(){
       return tag(m.num) + ' ' + m.from + ' \u2192 ' + m.to; }).join(', ') + '</span>' : '') +
     '</div>';
 }
+function renderSelBar(){
+  var el = $('selBar');
+  if (sel.field == null || !S.live){ el.classList.add('hide'); el.innerHTML = ''; return; }
+  var n = sel.field, out = pending.outL.indexOf(n) >= 0;
+  el.classList.remove('hide');
+  el.innerHTML = '<div class="selbar"><b>' + esc(nameOf(n) || ('#' + n)) + '</b>' +
+    '<button id="btnSelOut">' + (out ? 'Keep in' : 'Send out') + '</button>' +
+    '<button id="btnSelCancel">Cancel</button>' +
+    '<span>or tap a position to move</span></div>';
+}
 function renderSpots(){
   var rows = [['C','X','Y','Z'], ['R','Q']];
   var html = '';
@@ -1678,9 +1771,9 @@ function renderSpots(){
         (sp === 'Q' && n != null && n === S.qbNow ? ' qbnowspot' : '');
       var outNow = n != null && pending.outL.indexOf(n) >= 0;
       html += '<button class="' + cls + '" data-spot="' + sp + '">' +
-        '<u>' + sp + (n != null ? ' \u00b7 ' + total(n) : '') + '</u>' +
+        '<u>' + sp + (n != null ? ' \u00b7 ' + (+total(n)) + '</u>' : '</u>') +
         (n == null ? '<b>&mdash;</b><i>open</i>'
-                   : '<b>' + n + '</b><i>' + (outNow ? 'OUT' : esc(nameOf(n) || SPOT_NAME[sp])) + '</i>') +
+                   : '<b>' + (+n) + '</b><i>' + (outNow ? 'OUT' : esc(nameOf(n) || SPOT_NAME[sp])) + '</i>') +
         '</button>';
     });
   });
@@ -1707,8 +1800,8 @@ function renderDeck(sg, due, canSwap){
   el.classList.remove('hide');
   el.innerHTML = '<div class="deck"><b>Going in next</b>' +
     S.onDeck.map(function(d){
-      return '<span>' + (nameOf(d.kid) ? esc(nameOf(d.kid)) + ' ' : '') + d.kid +
-        ' \u2192 ' + d.spot + '</span>';
+      return '<span>' + (nameOf(d.kid) ? esc(nameOf(d.kid)) + ' ' : '') + (+d.kid) +
+        ' \u2192 ' + esc(d.spot) + '</span>';
     }).join('') + '</div>';
 }
 function renderSafeties(){
@@ -1719,7 +1812,7 @@ function renderSafeties(){
     var n = (S.safeties || {})[sp];
     var cls = 'chip' + (sel.safety === sp ? ' pick' : '');
     return '<button class="' + cls + '" data-safety="' + sp + '">' +
-      '<s>' + sp + '</s><b>' + (n == null ? '&mdash;' : n) + '</b><i>' +
+      '<s>' + esc(sp) + '</s><b>' + (n == null ? '&mdash;' : (+n)) + '</b><i>' +
       (n == null ? 'tap' : esc(nameOf(n) || 'set')) + '</i></button>';
   }).join('');
 }
@@ -1755,7 +1848,7 @@ function render(){
     $('wizAtt').innerHTML = S.roster.map(function(p){
       var here = S.present.indexOf(p.num) >= 0;
       var nm = p.name ? p.name.trim() : '';
-      return '<button class="chip' + (p.qb ? ' qb' : '') + '" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
+      return '<button class="chip' + (p.qb ? ' qb' : '') + '" data-att="' + (+p.num) + '" style="opacity:' + (here?1:.35) +
         ';border-color:' + (here?'var(--ok)':'var(--line)') + '">' +
         (nm ? '<s>' + (here?'here':'out') + '</s>' : '') +
         '<b>' + p.num + '</b><i>' + esc(nm || (here?'here':'out')) + '</i></button>';
@@ -1799,7 +1892,7 @@ function render(){
         ' on the field, ' + S.subSize + ' subbed every ' + S.interval + ' ' + uWord +
         ' \u2014 everyone gets a turn about every ' + cycle + ' ' + uWord + '.';
     }
-    $('step3').querySelectorAll('.set').forEach(function(el){
+    Array.prototype.slice.call($('step3').querySelectorAll('.set')).forEach(function(el){
       el.style.display = benchSize <= 0 ? 'none' : '';
     });
   }
@@ -1875,6 +1968,7 @@ function render(){
       'Tap a kid and a spot if you want to change it.</p>' : '') + resetLink;
 
   renderSubDiff();
+  renderSelBar();
   renderSpots();
   renderDeck(sg, due, canSwap);
   renderSafeties();
@@ -1884,7 +1978,7 @@ function render(){
     var lvl = qbLevel(n);
     return '<button class="prow' + (inSwap || sel.bench === n ? ' in' : '') + (short(n) ? ' short' : '') +
       '" data-n="' + n + '" data-w="bench">' +
-      '<b>' + n + '</b><span>' + esc(nameOf(n) || '') + '</span>' +
+      '<b>' + (+n) + '</b><span>' + esc(nameOf(n) || '') + '</span>' +
       (lvl ? '<em class="tag' + (lvl === 'main' ? ' main' : '') + '">' +
         (lvl === 'main' ? 'QB' : 'QB?') + '</em>' : '') +
       '<i>' + total(n) + '<u>plays</u></i>' +
@@ -1976,8 +2070,8 @@ function render(){
   $('attChips').innerHTML = S.roster.map(function(p){
     var here = S.present.indexOf(p.num) >= 0;
     var lvl = qbLevel(p.num);
-    return '<button class="prow att' + (here ? ' here' : ' away') + '" data-att="' + p.num + '">' +
-      '<b>' + p.num + '</b><span>' + esc(p.name ? p.name.trim() : '') + '</span>' +
+    return '<button class="prow att' + (here ? ' here' : ' away') + '" data-att="' + (+p.num) + '">' +
+      '<b>' + (+p.num) + '</b><span>' + esc(p.name ? p.name.trim() : '') + '</span>' +
       (lvl ? '<em class="tag' + (lvl === 'main' ? ' main' : '') + '">' +
         (lvl === 'main' ? 'QB' : 'QB?') + '</em>' : '') +
       '<i>' + (here ? 'here' : 'out') + '</i></button>';
@@ -1988,13 +2082,13 @@ function render(){
   $('names').innerHTML = S.roster.map(function(p){
     return '<div class="set nameset">' +
       '<input class="numin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" ' +
-      'data-num="' + p.num + '" value="' + p.num + '">' +
-      '<input type="text" data-name="' + p.num + '" value="' +
+      'data-num="' + (+p.num) + '" value="' + (+p.num) + '">' +
+      '<input type="text" data-name="' + (+p.num) + '" value="' +
       esc(p.name||'') + '" maxlength="14" placeholder="First name">' +
       '<button class="qbtog' + (p.qb === 'main' ? ' on' : (p.qb === 'sometimes' ? ' some' : '')) +
-      '" data-qb="' + p.num + '">' +
+      '" data-qb="' + (+p.num) + '">' +
       (p.qb === 'main' ? 'QB' : (p.qb === 'sometimes' ? 'QB?' : '\u2014')) + '</button>' +
-      '<button class="delkid' + (delArmed === p.num ? ' armed' : '') + '" data-del="' + p.num + '">' +
+      '<button class="delkid' + (delArmed === p.num ? ' armed' : '') + '" data-del="' + (+p.num) + '">' +
       (delArmed === p.num ? 'Remove?' : '\u00d7') + '</button></div>';
   }).join('');
   var nq = S.present.filter(isMainQb).length;
@@ -2015,6 +2109,7 @@ function render(){
   $('appVer').textContent = APP_VERSION;
   $('vGap').textContent = S.gapLimit;
   $('vSomeTurns').textContent = S.sometimesTurns;
+  $('vHalfLen').textContent = S.halfLen;
   $('btnPosLeast').classList.toggle('on', S.posMode !== 'same');
   $('btnPosSame').classList.toggle('on', S.posMode === 'same');
   $('btnQbSoft').classList.toggle('on', S.qbRule !== 'hard');
@@ -2066,7 +2161,7 @@ function render(){
     var g = gameByNo(wn), st = slotState(wn), right, sub, col;
     if (st === 'final'){
       col = g.us > g.them ? 'ok' : (g.us < g.them ? 'warn' : 'muted');
-      right = '<b style="color:var(--' + col + ')">' + g.us + '\u2013' + g.them + '</b>final';
+      right = '<b style="color:var(--' + col + ')">' + (+g.us||0) + '\u2013' + (+g.them||0) + '</b>final';
       sub = fmtDate(g.date) + ' \u00b7 ' + g.plays + ' plays';
     } else if (st === 'live'){
       right = '<b style="color:var(--off)">' + S.us + '\u2013' + S.them + '</b>live';
@@ -2120,6 +2215,9 @@ document.addEventListener('click', function(e){
     if (sel.bench != null){                       // bench kid -> this spot: manual sub
       snapshot('undo manual sub');
       var inK = sel.bench; sel.bench = null;
+      if (at == null && S.field.length >= S.fieldSize){
+        return render();                      // no room; use the sub flow instead
+      }
       if (at != null){
         S.field = S.field.filter(function(x){ return x !== at; });
         release([at]);
@@ -2128,6 +2226,8 @@ document.addEventListener('click', function(e){
       S.onDeck = null; pending = { inL: [], outL: [], auto: true }; pickQb();
       save(); return render();
     }
+    if (sel.field != null && S.field.indexOf(sel.field) < 0) sel.field = null;
+    if (sel.bench != null && S.present.indexOf(sel.bench) < 0) sel.bench = null;
     if (sel.field != null && sel.field !== at){    // swap two kids' spots
       snapshot('undo spot change');
       var from = spotOf(sel.field);
@@ -2142,9 +2242,9 @@ document.addEventListener('click', function(e){
   }
   if (t.dataset.safety){
     var ssp = t.dataset.safety;
-    if (sel.bench != null || sel.field != null){
+    if (sel.field != null && S.field.indexOf(sel.field) >= 0){
       snapshot('undo safety');
-      S.safeties[ssp] = sel.bench != null ? sel.bench : sel.field;
+      S.safeties[ssp] = sel.field;
       sel.bench = null; sel.field = null;
       save(); return render();
     }
@@ -2153,7 +2253,7 @@ document.addEventListener('click', function(e){
   }
   if (t.dataset.n){
     var w = t.dataset.w, n = +t.dataset.n;
-    if (sel.safety){
+    if (sel.safety && w === 'field'){
       snapshot('undo safety');
       S.safeties[sel.safety] = n; sel.safety = null;
       save(); return render();
@@ -2172,6 +2272,7 @@ document.addEventListener('click', function(e){
       else pending.inL.push(n);
       sel.bench = pending.inL.indexOf(n) >= 0 ? n : null;
     }
+    S.onDeck = null;
     return render();
   }
   if (t.dataset.qbnow){
@@ -2210,7 +2311,13 @@ document.addEventListener('click', function(e){
       S.present = S.present.filter(function(x){ return x !== an; });
       var was = S.field.indexOf(an) >= 0;
       S.field = S.field.filter(function(x){ return x !== an; });
-      if (was){ release([an]); var sp = spotOf(an); if (sp) S.spots[sp] = null; S.onDeck = null; fillField(); }
+      if (was){ release([an]); var sp = spotOf(an); if (sp) S.spots[sp] = null; fillField(); }
+      S.onDeck = null;
+      if (sel.field === an) sel.field = null;
+      if (sel.bench === an) sel.bench = null;
+      DEF_SPOTS.forEach(function(ds){ if (S.safeties[ds] === an) S.safeties[ds] = null; });
+      if (S.qbNow === an) pickQb(true);
+      if (S.live) syncFieldSize();
     } else {
       S.present.push(an);
       if (!S.stats[an]) S.stats[an] = {off:0, def:0};
@@ -2256,6 +2363,7 @@ document.addEventListener('click', function(e){
     var lim = LIM[t.dataset.s];
     S[t.dataset.s] = Math.max(lim[0], Math.min(lim[1], S[t.dataset.s] + (+t.dataset.d)));
     if (S.subSize > S.fieldSize) S.subSize = S.fieldSize;
+    if (t.dataset.s === 'halfLen' && S.clock) S.clock.len = S.halfLen * 60000;
     render(); save(); return;
   }
 
@@ -2270,6 +2378,13 @@ document.addEventListener('click', function(e){
     case 'btnQbHard':    S.qbRule = 'hard'; save(); return render();
     case 'btnSafeOn':    S.trackSafeties = true; save(); return render();
     case 'btnSafeOff':   S.trackSafeties = false; save(); return render();
+    case 'btnSelOut': {
+      var sn2 = sel.field; pending.auto = false;
+      var oi = pending.outL.indexOf(sn2);
+      if (oi >= 0) pending.outL.splice(oi, 1); else pending.outL.push(sn2);
+      sel.field = null; S.onDeck = null; return render();
+    }
+    case 'btnSelCancel': sel.field = null; sel.bench = null; return render();
     case 'btnSubTop':   return doSub(pending.inL.length ? pending.inL : suggest().inL,
                                      pending.outL.length ? pending.outL : suggest().outL);
     case 'btnKick':     return doKickoff();
@@ -2319,8 +2434,12 @@ document.addEventListener('click', function(e){
       var goIn = need.slice(0, Math.min(need.length, S.field.length));
       var goOut = S.field.slice().sort(function(a,c){
         return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0, goIn.length);
+      var freedC = goOut.map(spotOf).filter(function(k){ return k; });
+      goOut.forEach(function(n){ var k = spotOf(n); if (k) S.spots[k] = null; });
       S.field = S.field.filter(function(n){ return goOut.indexOf(n) < 0; }).concat(goIn);
-      release(goOut); assign(goIn); S.since = 0; S.rotation = 'catchup';
+      release(goOut); assign(goIn);
+      placeKids(goIn.slice(), freedC.length ? freedC : openSpots(), false);
+      S.onDeck = null; pickQb(); S.since = 0;
       pending = { inL: [], outL: [], auto: true };
       blink(); render(); save(); return;
     }
@@ -2482,7 +2601,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v30';
+var APP_VERSION = 'v31';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
