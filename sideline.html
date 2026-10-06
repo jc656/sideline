@@ -121,6 +121,28 @@
   .deck b{font:700 15px 'Barlow',sans-serif; color:var(--ok); display:block; margin-bottom:3px;}
   .deck span{font:600 15px 'Barlow',sans-serif; color:var(--text); margin-right:12px;
              display:inline-block;}
+  .prow{display:flex; align-items:center; gap:9px; width:100%; min-height:46px;
+        padding:6px 11px; margin-bottom:6px; border-radius:11px; cursor:pointer;
+        border:2px solid var(--line); background:var(--panel2); color:var(--text); text-align:left;}
+  .prow b{font:700 21px 'Barlow Condensed',sans-serif; min-width:26px; line-height:1;
+          font-variant-numeric:tabular-nums;}
+  .prow span{flex:1; min-width:0; font:700 15px 'Barlow',sans-serif; letter-spacing:.03em;
+             text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .prow i{font-style:normal; font:700 19px 'Barlow Condensed',sans-serif; color:var(--text);
+          display:flex; align-items:baseline; gap:4px; font-variant-numeric:tabular-nums;}
+  .prow i u{text-decoration:none; font:600 10px 'Barlow',sans-serif; color:var(--muted);
+            text-transform:uppercase; letter-spacing:.05em;}
+  .prow em.tag{font-style:normal; font:700 10px 'Barlow',sans-serif; letter-spacing:.05em;
+               color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:2px 5px;}
+  .prow em.tag.main{color:var(--link); border-color:var(--link);}
+  .prow s{text-decoration:none; font:700 11px 'Barlow',sans-serif; color:var(--ok); letter-spacing:.05em;}
+  .prow.in{border-color:var(--ok); background:rgba(95,217,122,.14);}
+  .prow.short{border-color:var(--warn);}
+  .prow.short i{color:var(--warn);}
+  .prow.att.here{border-color:var(--ok);}
+  .prow.att.here i{color:var(--ok); font:700 12px 'Barlow',sans-serif; letter-spacing:.05em;}
+  .prow.att.away{opacity:.45;}
+  .prow.att.away i{font:700 12px 'Barlow',sans-serif; letter-spacing:.05em; color:var(--muted);}
   .posgrid{overflow-x:auto;}
   .posgrid table{border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums;}
   .posgrid th,.posgrid td{padding:5px 4px; text-align:center; font:600 13px 'Barlow',sans-serif;
@@ -369,6 +391,13 @@
       </div>
     </div>
 
+    <div class="card hide" id="firstRun" style="border-color:var(--ok)">
+      <h2>First time here</h2>
+      <p class="hint" style="margin:0 0 10px">Two minutes of setup makes the rest easier: your team name, the kids\u2019 numbers and names, and who can play QB. You can skip and do it later \u2014 the app works with numbers alone.</p>
+      <button class="big fill" id="btnDoSetup">Set up my team</button>
+      <button class="big outline" id="btnSkipSetup" style="margin-top:8px">Skip for now</button>
+    </div>
+
     <div id="liveGame">
       <div id="alertBox"></div>
 
@@ -390,6 +419,7 @@
           <div class="chips qbpick" id="qbChips"></div>
         </div>
         <h2 style="margin:14px 0 9px">Bench <em id="benchMeta"></em></h2>
+        <p class="hint" style="margin:0 0 7px">Fewest plays first \u2014 top of the list needs reps.</p>
         <div class="chips bench" id="benchChips"></div>
         <button class="big fill" id="btnSub" style="margin-top:12px">Make these subs</button>
         <div id="subExtra"></div>
@@ -486,6 +516,10 @@
       <div class="set">
         <p>Sometimes-QB turns a game<em>One block at QB for each QB? kid</em></p>
         <div class="step"><button data-s="sometimesTurns" data-d="-1">&minus;</button><b id="vSomeTurns"></b><button data-s="sometimesTurns" data-d="1">+</button></div>
+      </div>
+      <div class="set">
+        <p>QB rule<em>Soft just warns; hard changes who subs to keep a QB on</em></p>
+        <div class="seg"><button id="btnQbSoft">Soft</button><button id="btnQbHard">Hard</button></div>
       </div>
       <div class="set">
         <p>Track safeties<em>S1 and S2 chips on defence</em></p>
@@ -623,7 +657,7 @@ var S = {
   startSide: 'offense', half: 1, halfLen: 25, clock: null,
   spots: {}, posSnaps: {}, safeties: {S1:null, S2:null}, onDeck: null, qbTurnUsed: {},
   qLast: null, qHeld: 0,
-  posMode: 'least', sometimesTurns: 1, trackSafeties: true,
+  posMode: 'least', sometimesTurns: 1, trackSafeties: true, qbRule: 'soft',
   fieldSize: 6, subSize: 3, interval: 4, trigger: 'plays', rotation: 'sequence', gapLimit: 6,
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
   weeks: 8, slot: 1, pin: ''
@@ -644,6 +678,29 @@ function put(k,v){
     storageOk = false;
     showStorageWarning();
   }
+}
+// iOS keeps separate storage for a Safari tab and the home-screen app, so a game
+// started in one is invisible in the other. Say so, once, in the Safari tab.
+function showBrowserWarning(){
+  var standalone = (window.navigator && window.navigator.standalone) ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (standalone) return;
+  if (document.getElementById('browserBanner')) return;
+  try{ if (localStorage.getItem('fb:hideTabWarn') === '1') return; }catch(e){}
+  var b = document.createElement('div');
+  b.id = 'browserBanner';
+  b.style.cssText = 'position:relative;z-index:21;background:#8A6500;color:#fff;' +
+    'padding:calc(9px + env(safe-area-inset-top)) 40px 9px 16px;font:600 14px/1.35 Barlow,sans-serif;' +
+    'text-align:center;';
+  b.textContent = 'This is a Safari tab. Games you keep on the home-screen app are not here, ' +
+    'and Safari can clear this tab\u2019s data after a week. Add to Home Screen and use that icon.';
+  var x = document.createElement('button');
+  x.textContent = '\u00d7';
+  x.style.cssText = 'position:absolute;top:calc(5px + env(safe-area-inset-top));right:8px;background:none;' +
+    'border:0;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;';
+  x.onclick = function(){ try{ localStorage.setItem('fb:hideTabWarn','1'); }catch(e){} b.remove(); };
+  b.appendChild(x);
+  document.body.insertBefore(b, document.body.firstChild);
 }
 function showStorageWarning(){
   if (document.getElementById('storageBanner')) return;
@@ -697,6 +754,7 @@ function load(){
     if (S.posMode == null) S.posMode = 'least';
     if (S.sometimesTurns == null) S.sometimesTurns = 1;
     if (S.trackSafeties == null) S.trackSafeties = true;
+    if (S.qbRule == null) S.qbRule = 'soft';
     if (S.field.length && !spotsFilled().length){
       var inOrder = S.field.slice().sort(function(a,c){ return a-c; });
       var q = inOrder.filter(function(n){ return qbLevel(n); })[0];
@@ -706,6 +764,7 @@ function load(){
       });
     }
     syncSpots();
+    showBrowserWarning();
     if (!S.slot || (!S.live && gameByNo(S.slot))) S.slot = nextOpenSlot();
     checkIncomingLink();
     render();
@@ -751,6 +810,7 @@ function isMainQb(n){ return qbLevel(n) === 'main'; }
 function isSometimesQb(n){ return qbLevel(n) === 'sometimes'; }
 
 /* ---------- positions ---------- */
+var qbWarn = false;
 var SPOTS = ['C','X','Y','Z','R','Q'];          // line row, then back row
 var OFF_SPOTS = ['C','Q','R','X','Y','Z'];
 var DEF_SPOTS = ['S1','S2'];
@@ -1018,7 +1078,12 @@ function suggest(){
       return total(c)-total(a) || (S.entry[a]||0)-(S.entry[c]||0); }).slice(0,k);
   }
   outL = outL.slice(0, inL.length);
-  return keepQb(inL, outL);
+  // Soft rule: never change who plays for the sake of a position. Just flag it,
+  // and let the spot assignment put an eligible kid at Q when one is out there.
+  if (S.qbRule === 'hard') return keepQb(inL, outL);
+  var after = S.field.filter(function(n){ return outL.indexOf(n) < 0; }).concat(inL);
+  qbWarn = qbsPresent().length > 0 && !hasQb(after);
+  return {inL:inL, outL:outL};
 }
 
 // Never leave the field without someone who can throw. First try bringing on the
@@ -1717,13 +1782,25 @@ function render(){
     : balanced ? 'Make these subs' : 'Tap players to swap';
   var resetLink = !pending.auto && sg.inL.length
     ? '<button class="cap" id="btnResetPending" style="color:var(--link);border:0;background:0;padding:14px 0;cursor:pointer;font:600 15px Barlow,sans-serif">Undo my changes</button>' : '';
-  $('subExtra').innerHTML = resetLink;
+  $('subExtra').innerHTML = (qbWarn && S.qbRule !== 'hard'
+    ? '<p class="hint warn" style="margin:9px 0 0">Heads up: after this swap nobody on the field is marked QB. ' +
+      'Tap a kid and a spot if you want to change it.</p>' : '') + resetLink;
 
   renderSpots();
   renderDeck(sg, due, canSwap);
   renderSafeties();
-  $('benchChips').innerHTML = b.slice().sort(function(a,c){return a-c;})
-    .map(function(n){ return chipHtml(n,'bench'); }).join('') || '<p class="hint">Bench is empty.</p>';
+  var benchSorted = b.slice().sort(function(a,c){ return total(a)-total(c) || a-c; });
+  $('benchChips').innerHTML = benchSorted.map(function(n){
+    var inSwap = pending.inL.indexOf(n) >= 0;
+    var lvl = qbLevel(n);
+    return '<button class="prow' + (inSwap ? ' in' : '') + (short(n) ? ' short' : '') +
+      '" data-n="' + n + '" data-w="bench">' +
+      '<b>' + n + '</b><span>' + esc(nameOf(n) || '') + '</span>' +
+      (lvl ? '<em class="tag' + (lvl === 'main' ? ' main' : '') + '">' +
+        (lvl === 'main' ? 'QB' : 'QB?') + '</em>' : '') +
+      '<i>' + total(n) + '<u>plays</u></i>' +
+      (inSwap ? '<s>IN</s>' : '') + '</button>';
+  }).join('') || '<p class="hint">Bench is empty.</p>';
   $('clockTime').textContent = clockText();
   $('clockTime').classList.toggle('low', clockLeft() <= 5*60000);
   $('btnClock').textContent = (S.clock && S.clock.run) ? 'Pause' : 'Start';
@@ -1733,6 +1810,9 @@ function render(){
   $('clockHint').textContent = S.half === 2
     ? 'Second half. Subs are suggested by playing time now, so whoever played least goes in first.'
     : 'Rough guide only \u2014 tap Start at kickoff. Starting the second half resets the clock and switches subs to catch-up.';
+  var needsSetup = !S.live && !S.setupSkipped && !S.team &&
+    !S.roster.some(function(p){ return p.name; }) && !season.length;
+  $('firstRun').classList.toggle('hide', !needsSetup);
   var showQb = S.live && S.mode === 'offense';
   $('qbSection').classList.toggle('hide', !showQb);
   if (showQb){
@@ -1795,12 +1875,12 @@ function render(){
 
   $('attChips').innerHTML = S.roster.map(function(p){
     var here = S.present.indexOf(p.num) >= 0;
-    var nm = p.name ? p.name.trim().slice(0,4) : '';
-    // Roll call reads by name, so the name gets the line and here/out the badge.
-    return '<button class="chip' + (p.qb ? ' qb' : '') + '" data-att="' + p.num + '" style="opacity:' + (here?1:.35) +
-      ';border-color:' + (here?'var(--ok)':'var(--line)') + '">' +
-      (nm ? '<s>' + (here?'here':'out') + '</s>' : '') +
-      '<b>' + p.num + '</b><i>' + esc(nm || (here?'here':'out')) + '</i></button>';
+    var lvl = qbLevel(p.num);
+    return '<button class="prow att' + (here ? ' here' : ' away') + '" data-att="' + p.num + '">' +
+      '<b>' + p.num + '</b><span>' + esc(p.name ? p.name.trim().slice(0,4) : '') + '</span>' +
+      (lvl ? '<em class="tag' + (lvl === 'main' ? ' main' : '') + '">' +
+        (lvl === 'main' ? 'QB' : 'QB?') + '</em>' : '') +
+      '<i>' + (here ? 'here' : 'out') + '</i></button>';
   }).join('');
   renderPosGrid();
   $('hereMeta').textContent = S.present.length + ' of ' + S.roster.length;
@@ -1833,6 +1913,8 @@ function render(){
   $('vSomeTurns').textContent = S.sometimesTurns;
   $('btnPosLeast').classList.toggle('on', S.posMode !== 'same');
   $('btnPosSame').classList.toggle('on', S.posMode === 'same');
+  $('btnQbSoft').classList.toggle('on', S.qbRule !== 'hard');
+  $('btnQbHard').classList.toggle('on', S.qbRule === 'hard');
   $('btnSafeOn').classList.toggle('on', S.trackSafeties !== false);
   $('btnSafeOff').classList.toggle('on', S.trackSafeties === false);
   $('gapSub').textContent = gapLimit() > S.gapLimit
@@ -2058,10 +2140,14 @@ document.addEventListener('click', function(e){
   }
 
   switch(t.id){
+    case 'btnDoSetup':   switchTab('tTeam'); return;
+    case 'btnSkipSetup': S.setupSkipped = true; save(); return render();
     case 'btnPosGame':   posView = 'game'; return render();
     case 'btnPosSeason': posView = 'season'; return render();
     case 'btnPosLeast':  S.posMode = 'least'; save(); return render();
     case 'btnPosSame':   S.posMode = 'same'; save(); return render();
+    case 'btnQbSoft':    S.qbRule = 'soft'; save(); return render();
+    case 'btnQbHard':    S.qbRule = 'hard'; save(); return render();
     case 'btnSafeOn':    S.trackSafeties = true; save(); return render();
     case 'btnSafeOff':   S.trackSafeties = false; save(); return render();
     case 'btnUndoPat': return undo();
@@ -2219,7 +2305,7 @@ function resetEverything(){
     startSide:'offense', half:1, halfLen:25, clock:null,
     spots:{}, posSnaps:{}, safeties:{S1:null,S2:null}, onDeck:null, qbTurnUsed:{},
     qLast:null, qHeld:0,
-    posMode:'least', sometimesTurns:1, trackSafeties:true,
+    posMode:'least', sometimesTurns:1, trackSafeties:true, qbRule:'soft',
     fieldSize:6, subSize:3, interval:4, trigger:'plays', rotation:'sequence', gapLimit:6,
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
     weeks:8, slot:1, pin:''
@@ -2256,7 +2342,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v27';
+var APP_VERSION = 'v28';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
