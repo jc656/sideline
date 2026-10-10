@@ -145,19 +145,23 @@
          text-transform:uppercase; margin:0 0 4px;}
   .ptlab.on{color:var(--ok);}
   .ptrow{display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin-bottom:9px;}
-  .pt{position:relative; border-radius:8px; padding:4px 2px 8px; text-align:center; overflow:hidden;}
-  .pt u{display:block; text-decoration:none; font:700 11px 'Barlow',sans-serif;
-        font-variant-numeric:tabular-nums;}
+  .pt{position:relative; border-radius:8px; padding:11px 2px 8px; text-align:center; overflow:hidden;}
+  .pt u{display:block; text-decoration:none; font:700 11.5px 'Barlow',sans-serif;
+        letter-spacing:.02em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pt i{position:absolute; top:2px; left:4px; font-style:normal; font:700 9px 'Barlow',sans-serif;
+        font-variant-numeric:tabular-nums; opacity:.85;}
   .pt b{display:block; font:700 20px 'Barlow Condensed',sans-serif; line-height:1.05;
         font-variant-numeric:tabular-nums;}
   .pt s{position:absolute; left:0; bottom:0; height:3px; text-decoration:none;}
   /* on the field: solid and bright. sitting: outlined and dim. */
   .pt.on{background:var(--ok); border:2px solid var(--ok);}
-  .pt.on u{color:rgba(11,15,20,.72);}
+  .pt.on u{color:#0B0F14;}
+  .pt.on i{color:rgba(11,15,20,.6);}
   .pt.on b{color:#0B0F14;}
   .pt.on s{background:rgba(11,15,20,.35);}
   .pt.off{background:transparent; border:2px dashed #3C4A5A;}
-  .pt.off u{color:var(--muted);} .pt.off b{color:var(--muted);}
+  .pt.off u{color:#B9C6D4;} .pt.off b{color:var(--muted);}
+  .pt.off i{color:var(--muted);}
   .pt.off s{background:#3C4A5A;}
   .pt.short{border-color:var(--warn) !important;}
   .pt.off.short b{color:var(--warn);}
@@ -1786,7 +1790,9 @@ function renderPtStrip(){
       var t = total(n);
       var cls = 'pt' + (on ? ' on' : ' off') + (short(n) ? ' short' : '');
       var pct = lead ? Math.round(t / lead * 100) : 0;
-      return '<div class="' + cls + '"><u>' + (+n) + '</u><b>' + t + '</b>' +
+      var nm = nameOf(n, 4);
+      return '<div class="' + cls + '"><i>' + (+n) + '</i>' +
+        '<u>' + (nm ? esc(nm.toUpperCase()) : '&nbsp;') + '</u><b>' + t + '</b>' +
         '<s style="width:' + pct + '%"></s></div>';
     }).join('');
   }
@@ -2686,7 +2692,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v37';
+var APP_VERSION = 'v38';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
