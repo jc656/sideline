@@ -176,6 +176,7 @@
   .deck{border:2px solid var(--ok); background:rgba(95,217,122,.12); border-radius:12px;
         padding:9px 11px; margin-bottom:10px;}
   .deck b{font:700 15px 'Barlow',sans-serif; color:var(--ok); display:block; margin-bottom:3px;}
+  .deck span.offline{color:var(--warn);}
   .deck span{font:600 15px 'Barlow',sans-serif; color:var(--text); margin-right:12px;
              display:inline-block;}
   .prow{display:flex; align-items:center; gap:9px; width:100%; min-height:46px;
@@ -1785,6 +1786,13 @@ function nameOf(n, max){
 }
 // Everyone's snaps, all the time: the number that actually matters, on the
 // screen the coach is already looking at.
+// "OFF: Mike 23, Tyler 44   ON: Jack 7, Ava 5" - both halves, in names.
+function who(n){ var nm = nameOf(n, 5); return nm ? nm + ' ' + n : '#' + n; }
+function swapLine(outL, inL){
+  var off = outL.length ? 'OFF: ' + outL.map(who).join(', ') : '';
+  var on  = inL.length  ? 'ON: '  + inL.map(who).join(', ')  : '';
+  return off && on ? off + '   ' + on : (off || on);
+}
 function renderPtStrip(){
   var lead = leader();
   function cells(list, on){
@@ -1872,9 +1880,10 @@ function renderDeck(sg, due, canSwap){
     }
   }
   el.classList.remove('hide');
-  el.innerHTML = '<div class="deck"><b>Going in next</b>' +
+  el.innerHTML = '<div class="deck"><b>Next sub</b>' +
+    '<span class="offline">OFF: ' + (sg.outL.length ? sg.outL.map(who).join(', ') : '\u2014') + '</span>' +
     S.onDeck.map(function(d){
-      return '<span>' + (nameOf(d.kid) ? esc(nameOf(d.kid)) + ' ' : '') + (+d.kid) +
+      return '<span>ON: ' + (nameOf(d.kid) ? esc(nameOf(d.kid)) + ' ' : '') + (+d.kid) +
         ' \u2192 ' + esc(d.spot) + '</span>';
     }).join('') + '</div>';
 }
@@ -2014,15 +2023,16 @@ function render(){
     $('cSub').textContent = 'No bench today \u2014 nothing to rotate.';
   } else if (due){
     $('cTitle').textContent = 'SUB NOW';
-    $('cSub').textContent = S.since > S.interval
-      ? (S.since - S.interval) + ' ' + (S.trigger==='plays'?'play':'possession') +
-        (S.since - S.interval === 1 ? '' : 's') + ' past due'
-      : 'Send in ' + pending.inL.join(', ') + '.';
+    $('cSub').textContent = swapLine(pending.outL, pending.inL) +
+      (S.since > S.interval
+        ? '  (' + (S.since - S.interval) + ' ' + (S.trigger==='plays'?'play':'possession') +
+          (S.since - S.interval === 1 ? '' : 's') + ' past due)'
+        : '');
   } else {
     $('cTitle').textContent = openingSeries()
       ? 'Series ' + S.series + ' of ' + S.openSeries + ' \u2014 opening rotation'
       : (unit === 'play' ? 'Plays this rotation' : 'Possessions this rotation');
-    $('cSub').textContent = left + ' more, then sub in ' + pending.inL.join(', ') + ' in.';
+    $('cSub').textContent = left + ' more, then ' + swapLine(pending.outL, pending.inL);
   }
   var balanced = pending.inL.length > 0 && pending.inL.length === pending.outL.length;
   $('btnSub').disabled = !balanced;
@@ -2695,7 +2705,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v39';
+var APP_VERSION = 'v40';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
