@@ -132,6 +132,8 @@
   .spotgrid .spot.empty{border-style:dashed; color:var(--muted);}
   .spotgrid .spot.pick{border-color:var(--text); box-shadow:0 0 0 3px rgba(242,246,250,.18);}
   .spotgrid .spot.swout{border-color:var(--warn); background:rgba(255,107,74,.18);}
+  .spotgrid .spot em.outtag{position:absolute; top:2px; right:4px; font-style:normal;
+                            font:700 9px 'Barlow',sans-serif; color:var(--warn); letter-spacing:.06em;}
   .spotgrid .spot.qbnowspot{border-color:var(--off);}
   .selbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap; border:2px solid var(--text);
           border-radius:12px; padding:8px 10px; margin-bottom:10px; background:var(--panel2);}
@@ -1844,7 +1846,8 @@ function renderSpots(){
       html += '<button class="' + cls + '" data-spot="' + sp + '">' +
         '<u>' + sp + (n != null ? ' \u00b7 ' + (+total(n)) + '</u>' : '</u>') +
         (n == null ? '<b>&mdash;</b><i>open</i>'
-                   : '<b>' + (+n) + '</b><i>' + (outNow ? 'OUT' : esc(nameOf(n) || SPOT_NAME[sp])) + '</i>') +
+                   : (outNow ? '<em class="outtag">OUT</em>' : '') +
+                     '<b>' + (+n) + '</b><i>' + esc(nameOf(n) || SPOT_NAME[sp]) + '</i>') +
         '</button>';
     });
   });
@@ -2692,7 +2695,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v38';
+var APP_VERSION = 'v39';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
