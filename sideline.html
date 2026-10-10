@@ -102,9 +102,12 @@
   .kidhead span.nm{flex:1; text-align:left;}
   .kidhead span.x{width:44px;}
   .kidrow{display:flex; align-items:center; gap:8px; padding:4px 0;}
-  .kidrow input{height:46px; font-size:17px;}
-  .numin{flex:none; width:54px; text-align:center; font-weight:700; font-size:19px;}
-  .nmin{flex:1; min-width:0;}
+  /* input[type=text] sets width:100% and outranks a bare class, so these have to
+     be at least as specific or the number box swallows the row */
+  .kidrow input{height:46px; font-size:17px; padding:10px 12px;}
+  .kidrow input.numin{flex:0 0 56px; width:56px; text-align:center; font-weight:700; font-size:19px;
+                      padding:10px 4px;}
+  .kidrow input.nmin{flex:1 1 auto; width:auto; min-width:0;}
   .delkid.armed{width:auto; padding:0 10px; border-color:var(--warn); color:var(--warn); font-size:13px;}
   .delkid{flex:none; width:44px; height:46px; border-radius:10px; cursor:pointer;
           border:2px solid var(--line); background:var(--panel2); color:var(--muted);
@@ -2597,7 +2600,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v33';
+var APP_VERSION = 'v34';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
