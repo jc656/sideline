@@ -550,6 +550,14 @@
         <div class="step"><button data-s="sometimesTurns" data-d="-1">&minus;</button><b id="vSomeTurns"></b><button data-s="sometimesTurns" data-d="1">+</button></div>
       </div>
       <div class="set">
+        <p>Open by series<em id="openSub">Sub at each change of possession to start</em></p>
+        <div class="step"><button data-s="openSeries" data-d="-1">&minus;</button><b id="vOpenSeries"></b><button data-s="openSeries" data-d="1">+</button></div>
+      </div>
+      <div class="set">
+        <p>Opening sub size<em>How many go on at each of those breaks</em></p>
+        <div class="seg"><button id="btnOpen3">3</button><button id="btnOpen6">Whole unit</button></div>
+      </div>
+      <div class="set">
         <p>Half length<em>Minutes, for the clock only</em></p>
         <div class="step"><button data-s="halfLen" data-d="-1">&minus;</button><b id="vHalfLen"></b><button data-s="halfLen" data-d="1">+</button></div>
       </div>
@@ -695,6 +703,7 @@ var S = {
   team: '', roster: [], present: [], field: [], stats: {}, entry: {}, exit: {}, qbs: {}, qbNow: null, tick: 0,
   starters: [], started: null, live: false,
   startSide: 'offense', half: 1, halfLen: 25, clock: null, kickoff: false,
+  series: 1, openSeries: 0, openSubSize: 6,
   spots: {}, posSnaps: {}, safeties: {S1:null, S2:null}, onDeck: null, qbTurnUsed: {},
   qLast: null, qHeld: 0,
   posMode: 'least', sometimesTurns: 1, trackSafeties: false, qbRule: 'soft',
@@ -704,7 +713,7 @@ var S = {
 };
 var season = [], undoStack = [], lastAction = '', sel = {field:null, bench:null, safety:null, start:[]};
 var pending = { inL: [], outL: [], auto: true };
-var LIM = { weeks:[1,20], subSize:[1,6], interval:[1,12], gapLimit:[2,20], sometimesTurns:[0,3], halfLen:[5,40] };
+var LIM = { weeks:[1,20], subSize:[1,6], interval:[1,12], gapLimit:[2,20], sometimesTurns:[0,3], halfLen:[5,40], openSeries:[0,6] };
 var ORD = ['1st','2nd','3rd','4th'];
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -800,6 +809,9 @@ function repairState(){
   if (S.sometimesTurns == null) S.sometimesTurns = 1;
   if (S.trackSafeties == null) S.trackSafeties = false;
   if (S.qbRule == null) S.qbRule = 'soft';
+  if (S.series == null) S.series = 1;
+  if (S.openSeries == null) S.openSeries = 0;
+  if (S.openSubSize == null) S.openSubSize = 6;
   if (!S.down || S.down < 1 || S.down > 4) S.down = 1;
   if (S.mode !== 'defense') S.mode = 'offense';
   S.present = S.present.filter(function(n){
@@ -830,6 +842,9 @@ function load(){
     if (S.sometimesTurns == null) S.sometimesTurns = 1;
     if (S.trackSafeties == null) S.trackSafeties = false;
     if (S.qbRule == null) S.qbRule = 'soft';
+  if (S.series == null) S.series = 1;
+  if (S.openSeries == null) S.openSeries = 0;
+  if (S.openSubSize == null) S.openSubSize = 6;
     if (S.field.length && !spotsFilled().length){
       var inOrder = S.field.slice().sort(function(a,c){ return a-c; });
       var q = inOrder.filter(function(n){ return qbLevel(n); })[0];
@@ -871,6 +886,10 @@ function shortList(){
 }
 function assign(l){ l.forEach(function(n){ S.entry[n] = ++S.tick; }); }
 function release(l){ if (!S.exit) S.exit = {}; l.forEach(function(n){ S.exit[n] = ++S.tick; }); }
+// True while the game is still in the opening series the coach asked for.
+function openingSeries(){
+  return S.live && (S.openSeries|0) > 0 && (S.series || 1) <= (S.openSeries|0);
+}
 // Longest-waiting first; nobody who has never played waits behind someone who has.
 // Ties (start of game, or two kids pulled together) fall back to jersey order.
 function isQb(n){
@@ -1175,7 +1194,8 @@ function setStarters(list){
 
 function suggest(){
   var b = bench();
-  var k = Math.min(S.subSize, b.length, S.field.length);
+  var size = openingSeries() ? (S.openSubSize|0) : S.subSize;
+  var k = Math.min(size, b.length, S.field.length);
   if (!k) return {inL:[], outL:[]};
   var inL, outL;
   if (S.rotation === 'catchup'){
@@ -1318,6 +1338,10 @@ function countPlay(){
 function flipSide(){
   S.mode = S.mode === 'offense' ? 'defense' : 'offense';
   S.down = 1;
+  S.series = (S.series || 1) + 1;
+  // Opening series: sub at the break instead of mid-drive, so the whole team
+  // gets on the field early.
+  if (openingSeries()) S.since = S.interval;
   if (S.mode === 'offense') pickQb(true);
   if (S.trigger === 'possessions') S.since++;
 }
@@ -1387,6 +1411,7 @@ function toggleClock(){
 function startSecondHalf(){
   snapshot('undo second half');
   S.half = 2;
+  S.series = 1;
   S.clock = newClock();
   S.since = 0;
   // Second half is where playing time gets evened out, so lead with catch-up.
@@ -1403,7 +1428,7 @@ function startGame(){
   S.onDeck = null; S.qbTurnUsed = {}; S.qLast = null; S.qHeld = 0;
   S.play = 0; S.down = 1; S.since = 0; S.us = 0; S.them = 0; S.pat = false; S.kickoff = false;
   S.mode = S.startSide === 'defense' ? 'defense' : 'offense';
-  S.half = 1; S.clock = newClock();
+  S.half = 1; S.series = 1; S.clock = newClock();
   S.started = new Date().toISOString(); S.live = true;
   S.present.forEach(function(n){ S.stats[n] = {off:0, def:0}; });
   undoStack = [];
@@ -1937,7 +1962,9 @@ function render(){
         (S.since - S.interval === 1 ? '' : 's') + ' past due'
       : 'Send in ' + pending.inL.join(', ') + '.';
   } else {
-    $('cTitle').textContent = unit === 'play' ? 'Plays this rotation' : 'Possessions this rotation';
+    $('cTitle').textContent = openingSeries()
+      ? 'Series ' + S.series + ' of ' + S.openSeries + ' \u2014 opening rotation'
+      : (unit === 'play' ? 'Plays this rotation' : 'Possessions this rotation');
     $('cSub').textContent = left + ' more, then sub in ' + pending.inL.join(', ') + ' in.';
   }
   var balanced = pending.inL.length > 0 && pending.inL.length === pending.outL.length;
@@ -2105,6 +2132,13 @@ function render(){
   $('vGap').textContent = S.gapLimit;
   $('vSomeTurns').textContent = S.sometimesTurns;
   $('vHalfLen').textContent = S.halfLen;
+  $('vOpenSeries').textContent = S.openSeries ? S.openSeries : 'off';
+  $('openSub').textContent = S.openSeries
+    ? 'First ' + S.openSeries + ' series sub at the change of possession, ' +
+      S.openSubSize + ' at a time'
+    : 'Off \u2014 subs go by the play count all game';
+  $('btnOpen3').classList.toggle('on', (S.openSubSize|0) !== 6);
+  $('btnOpen6').classList.toggle('on', (S.openSubSize|0) === 6);
   $('btnPosLeast').classList.toggle('on', S.posMode !== 'same');
   $('btnPosSame').classList.toggle('on', S.posMode === 'same');
   $('btnQbSoft').classList.toggle('on', S.qbRule !== 'hard');
@@ -2372,6 +2406,8 @@ document.addEventListener('click', function(e){
     case 'btnPosSeason': posView = 'season'; return render();
     case 'btnPosLeast':  S.posMode = 'least'; save(); return render();
     case 'btnPosSame':   S.posMode = 'same'; save(); return render();
+    case 'btnOpen3':  S.openSubSize = 3; save(); return render();
+    case 'btnOpen6':  S.openSubSize = 6; save(); return render();
     case 'btnQbSoft':    S.qbRule = 'soft'; save(); return render();
     case 'btnQbHard':    S.qbRule = 'hard'; save(); return render();
     case 'btnSafeOn':    S.trackSafeties = true; save(); return render();
@@ -2561,6 +2597,7 @@ function resetEverything(){
     team:'', roster:[], present:[], field:[], stats:{}, entry:{}, exit:{}, qbs:{}, qbNow:null, tick:0,
     starters:[], started:null, live:false,
     startSide:'offense', half:1, halfLen:25, clock:null, kickoff:false,
+    series:1, openSeries:0, openSubSize:6,
     spots:{}, posSnaps:{}, safeties:{S1:null,S2:null}, onDeck:null, qbTurnUsed:{},
     qLast:null, qHeld:0,
     posMode:'least', sometimesTurns:1, trackSafeties:false, qbRule:'soft',
@@ -2600,7 +2637,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v34';
+var APP_VERSION = 'v35';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
