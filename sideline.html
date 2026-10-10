@@ -140,6 +140,19 @@
                  border:2px solid var(--line); background:var(--panel); color:var(--text);
                  font:600 14px 'Barlow',sans-serif;}
   .selbar span{flex-basis:100%; font-size:13px; color:var(--muted);}
+  .ptstrip{display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin-bottom:12px;}
+  .pt{position:relative; border:1px solid var(--line); background:var(--panel2); border-radius:8px;
+      padding:4px 2px 7px; text-align:center; overflow:hidden;}
+  .pt u{display:block; text-decoration:none; font:600 10px 'Barlow',sans-serif; color:var(--muted);
+        font-variant-numeric:tabular-nums;}
+  .pt b{display:block; font:700 19px 'Barlow Condensed',sans-serif; line-height:1.05;
+        font-variant-numeric:tabular-nums;}
+  .pt s{position:absolute; left:0; bottom:0; height:3px; background:var(--muted); text-decoration:none;}
+  .pt.on{border-color:#6E8198; background:#2A3745;}
+  .pt.on s{background:var(--ok);}
+  .pt.short{border-color:var(--warn);}
+  .pt.short b{color:var(--warn);}
+  .pt.short s{background:var(--warn);}
   .diff{border:2px solid var(--line); background:var(--panel2); border-radius:12px;
         padding:8px 11px; margin-bottom:10px;}
   .diff b{font:700 12px 'Barlow',sans-serif; color:var(--muted); letter-spacing:.06em;
@@ -209,7 +222,7 @@
   .next{border:2px solid var(--line);}
   .counter{display:flex; align-items:center; gap:13px; margin-bottom:10px;}
   .cnum{display:flex; align-items:baseline; gap:7px; flex:none;}
-    .cnum b{font:700 48px 'Barlow Condensed',sans-serif; line-height:.85;
+    .cnum b{font:700 34px 'Barlow Condensed',sans-serif; line-height:.9;
           font-variant-numeric:tabular-nums;}
   .cnum span{font:600 17px 'Barlow',sans-serif; color:var(--muted);}
   .cmsg{min-width:0; flex:1;}
@@ -224,7 +237,7 @@
   .next.due .cnum b{color:var(--off); font-size:30px;}
   .next.due .cnum span{color:var(--off); font-size:14px;}
   .next.due .cmsg{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
-  .next.due .ctitle{color:var(--off); font:700 30px 'Barlow Condensed',sans-serif;
+  .next.due .ctitle{color:var(--off); font:700 38px 'Barlow Condensed',sans-serif;
                     letter-spacing:.02em; line-height:1; flex:none;}
   .next.due .csub{font-size:14px; color:var(--text); margin-top:0; flex:1; min-width:0;}
   .next.due .nums b{border-color:var(--off);}
@@ -439,6 +452,8 @@
           <div class="cmsg"><div class="ctitle" id="cTitle">Plays this rotation</div>
             <div class="csub" id="cSub"></div></div>
         </div>
+        <h2>Playing time <em id="ptMeta"></em></h2>
+        <div class="ptstrip" id="ptStrip"></div>
         <div id="deckStrip" class="hide"></div>
         <div id="subDiff" class="hide"></div>
         <button class="big fill hide" id="btnSubTop" style="margin-bottom:12px"></button>
@@ -1753,6 +1768,25 @@ function nameOf(n, max){
   var nm = p && p.name ? p.name.trim() : '';
   return max && nm.length > max ? nm.slice(0, max) : nm;
 }
+// Everyone's snaps, all the time: the number that actually matters, on the
+// screen the coach is already looking at.
+function renderPtStrip(){
+  var lead = leader();
+  var html = S.present.slice().sort(function(a,c){ return total(a)-total(c) || a-c; })
+    .map(function(n){
+      var t = total(n), on = S.field.indexOf(n) >= 0;
+      var behind = lead - t;
+      var cls = 'pt' + (on ? ' on' : '') + (short(n) ? ' short' : '');
+      var pct = lead ? Math.round(t / lead * 100) : 0;
+      return '<div class="' + cls + '"><u>' + (+n) + '</u><b>' + t + '</b>' +
+        '<s style="width:' + pct + '%"></s></div>';
+    }).join('');
+  $('ptStrip').innerHTML = html;
+  var vals = S.present.map(total);
+  $('ptMeta').textContent = S.present.length
+    ? Math.min.apply(null, vals) + '\u2013' + Math.max.apply(null, vals) + ' plays \u00b7 on field outlined'
+    : '';
+}
 function renderSubDiff(){
   var el = $('subDiff'), d = S.lastSub;
   // keep it up for the next couple of snaps, then get out of the way
@@ -1988,6 +2022,7 @@ function render(){
     ? '<p class="hint warn" style="margin:9px 0 0">Heads up: after this sub nobody on the field is marked QB. ' +
       'Tap a kid and a spot if you want to change it.</p>' : '') + resetLink;
 
+  renderPtStrip();
   renderSubDiff();
   renderSelBar();
   renderSpots();
@@ -2637,7 +2672,7 @@ function revealPin(){
 }
 
 /* ---------- service worker ---------- */
-var APP_VERSION = 'v35';
+var APP_VERSION = 'v36';
 function updateBanner(worker){
   if (document.getElementById('updBanner')) return;
   var b = document.createElement('div');
