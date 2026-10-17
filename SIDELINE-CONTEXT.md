@@ -5,10 +5,26 @@ substitution strategy. It describes what the app does and exactly how it decides
 things, so strategy advice can build on it instead of guessing.
 
 Live app: https://jc656.github.io/sideline/ — source: github.com/jc656/sideline
-Single self-contained `sideline.html` (plain ES5, no framework, no build, no
-backend) plus a service worker, manifest and icons. All data is local to one
-phone's browser storage. Installed to the iPhone home screen; used on the
-sideline during games.
+(public repo). Single self-contained `sideline.html` (plain ES5, no framework,
+no build, no backend) plus a service worker, manifest and icons. All data is
+local to one phone's browser storage. Installed to the iPhone home screen; used
+on the sideline during games.
+
+## The other app in this repo: the digital playbook
+
+`playbook-live.html` ("Commanders Playbook: watch a play") is a separate,
+self-contained animated playbook — pick a play, watch assignments animate on a
+field diagram. Same install/offline pattern as the tracker (manifest, service
+worker caching). Linked from the same home page (`index.html`) as the sub
+tracker; unrelated code, just bundled in the same repo/deploy.
+
+It was built by digitizing three paper playbook PDFs: `Commanders-Coach-Pack.pdf`,
+`Commanders-Defense.pdf`, `Commanders-Offense.pdf`. Those PDFs are the team's
+real playbook material (not something we authored) and are **gitignored, not
+committed** — the repo is public, and distributing someone else's team playbook
+publicly isn't something to do without the team's sign-off. Keep them local-only
+when regenerating or extending plays; if the digital playbook needs updating,
+work from the PDFs on disk, don't assume they're available in a fresh clone.
 
 ## The setting
 
@@ -33,9 +49,34 @@ sideline during games.
 | `half`, `clock`, `halfLen` | half number, rough clock state, half length (25 min) |
 | `mode`, `down`, `play`, `since` | offense/defense, down, plays this game, plays since last swap |
 | `us`, `them`, `pat` | score, and whether the extra-point row is showing |
+| `offStart` / `defStart` | the 6 starters picked for offense / defense in the wizard (can overlap) |
+| `offSpotsStart` | `{spot:num}` — hand-picked offensive positions for `offStart`, partial ok |
+| `platoonSwap` | one-shot `{field, spots}` queued at kickoff for the side *not* starting; consumed (set to `null`) at the first change of possession |
 
 Finished games are archived separately (`fb:season`): per-kid stats, QB snaps,
 score, starters, names, game number.
+
+## Starting lineups: offense/defense split, decided after the coin toss
+
+The pre-game wizard picks **two** starting sixes, not one: offense starters
+(with optional hand-picked positions — `wizPosWrap` in the UI) and defense
+starters, in `sel.start`/`sel.offSpots` and `sel.defStart` while the wizard is
+open. They can be the same six or different kids. Picking "We start on
+offense/defense" is the last step, after both lineups are set — meant to
+happen right at the coin toss, not before.
+
+`startGame()` puts whichever side is starting on the field first (with manual
+offensive positions honored if that's the offense unit) and queues the other
+side's lineup as `S.platoonSwap`. The **first** `flipSide()` call (the first
+change of possession) consumes that queue via `swapToUnit()`, swapping the
+whole six over — including the hand-picked offensive positions, if it's the
+offense unit coming on. If both lineups are identical, `platoonSwap` is left
+`null` and nothing swaps (same two-way-six behavior as before this feature).
+
+After that one swap, it's over: there is deliberately **one shared rotation**
+for the rest of the game, same as always. This was a deliberate scope call —
+don't build a second, parallel offense/defense rotation unless asked; it was
+explicitly ruled out as unnecessary complexity for a rec team.
 
 ## Settings and defaults
 

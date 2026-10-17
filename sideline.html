@@ -421,11 +421,26 @@
       </div>
 
       <div class="card hide" id="step2">
-        <h2>Who starts <em id="wizStartMeta"></em></h2>
+        <h2>Who starts on offense <em id="wizStartMeta"></em></h2>
         <div class="chips bench" id="wizStart"></div>
         <button class="big outline" id="btnWizRandom">Pick a random group</button>
-        <button class="big fill" id="btnStep2" disabled>Next: set the rotation</button>
+        <div id="wizPosWrap" class="hide">
+          <h2 style="margin:14px 0 9px">Positions <em>tap a kid, then tap a spot &mdash; leave blank for auto</em></h2>
+          <div class="spotgrid" id="wizSpotGrid"></div>
+          <div class="chips bench" id="wizSpotKids"></div>
+          <button class="big outline" id="btnWizSpotAuto">Auto-fill the rest</button>
+        </div>
+        <button class="big fill" id="btnStep2" disabled>Next: pick the defense</button>
         <button class="big outline" id="btnBack1">Back</button>
+      </div>
+
+      <div class="card hide" id="step2b">
+        <h2>Who starts on defense <em id="wizDefMeta"></em></h2>
+        <div class="chips bench" id="wizDef"></div>
+        <button class="big outline" id="btnWizDefSame">Same as offense</button>
+        <button class="big outline" id="btnWizDefRandom">Pick a random group</button>
+        <button class="big fill" id="btnStep2b" disabled>Next: set the rotation</button>
+        <button class="big outline" id="btnBack2b">Back</button>
       </div>
 
       <div class="card hide" id="step3">
@@ -443,7 +458,7 @@
           <div class="seg"><button id="btnTrigPlay2">Plays</button><button id="btnTrigPoss2">Possessions</button></div>
         </div>
         <div class="set">
-          <p>We start on<em>Which side of the ball takes the first snap</em></p>
+          <p>We start on<em>Decide after the coin toss &mdash; both lineups are already set</em></p>
           <div class="seg"><button id="btnStartOff">Offense</button><button id="btnStartDef">Defense</button></div>
         </div>
         <p class="hint" id="wizSummary"></p>
@@ -733,6 +748,7 @@
 var S = {
   team: '', roster: [], present: [], field: [], stats: {}, entry: {}, exit: {}, qbs: {}, qbNow: null, tick: 0,
   starters: [], started: null, live: false,
+  offStart: [], defStart: [], offSpotsStart: {}, platoonSwap: null,
   startSide: 'offense', half: 1, halfLen: 25, clock: null, kickoff: false,
   series: 1, openSeries: 0, openSubSize: 6,
   spots: {}, posSnaps: {}, safeties: {S1:null, S2:null}, onDeck: null, qbTurnUsed: {},
@@ -742,7 +758,8 @@ var S = {
   mode: 'offense', play: 0, down: 1, since: 0, us: 0, them: 0, pat: false,
   weeks: 8, slot: 1, pin: ''
 };
-var season = [], undoStack = [], lastAction = '', sel = {field:null, bench:null, safety:null, start:[]};
+var season = [], undoStack = [], lastAction = '',
+    sel = {field:null, bench:null, safety:null, start:[], defStart:[], offSpots:{}, posPick:null};
 var pending = { inL: [], outL: [], auto: true };
 var LIM = { weeks:[1,20], subSize:[1,6], interval:[1,12], gapLimit:[2,20], sometimesTurns:[0,3], halfLen:[5,40], openSeries:[0,6] };
 var ORD = ['1st','2nd','3rd','4th'];
@@ -836,6 +853,10 @@ function repairState(){
   if (!S.posSnaps) S.posSnaps = {};
   if (!S.safeties) S.safeties = {S1:null, S2:null};
   if (!S.qbTurnUsed) S.qbTurnUsed = {};
+  if (!S.offStart) S.offStart = [];
+  if (!S.defStart) S.defStart = [];
+  if (!S.offSpotsStart) S.offSpotsStart = {};
+  if (S.platoonSwap === undefined) S.platoonSwap = null;
   if (S.posMode == null) S.posMode = 'least';
   if (S.sometimesTurns == null) S.sometimesTurns = 1;
   if (S.trackSafeties == null) S.trackSafeties = false;
@@ -869,6 +890,10 @@ function load(){
     if (!S.posSnaps) S.posSnaps = {};
     if (!S.safeties) S.safeties = {S1:null, S2:null};
     if (!S.qbTurnUsed) S.qbTurnUsed = {};
+    if (!S.offStart) S.offStart = [];
+    if (!S.defStart) S.defStart = [];
+    if (!S.offSpotsStart) S.offSpotsStart = {};
+    if (S.platoonSwap === undefined) S.platoonSwap = null;
     if (S.posMode == null) S.posMode = 'least';
     if (S.sometimesTurns == null) S.sometimesTurns = 1;
     if (S.trackSafeties == null) S.trackSafeties = false;
@@ -949,11 +974,20 @@ function renumber(oldN, newN){
   }
   S.roster.forEach(function(p){ if (p.num === oldN) p.num = newN; });
   [S.stats, S.entry, S.exit, S.qbs, S.posSnaps, S.qbTurnUsed].forEach(moveKey);
-  [S.present, S.field, S.starters, sel.start].forEach(moveList);
+  [S.present, S.field, S.starters, S.offStart, S.defStart,
+   sel.start, sel.defStart].forEach(moveList);
   for (var sp in S.spots) if (S.spots[sp] === oldN) S.spots[sp] = newN;
+  for (var sp2 in (S.offSpotsStart||{})) if (S.offSpotsStart[sp2] === oldN) S.offSpotsStart[sp2] = newN;
+  for (var sp3 in (sel.offSpots||{})) if (sel.offSpots[sp3] === oldN) sel.offSpots[sp3] = newN;
   for (var ds in (S.safeties||{})) if (S.safeties[ds] === oldN) S.safeties[ds] = newN;
   if (S.qbNow === oldN) S.qbNow = newN;
   if (S.qLast === oldN) S.qLast = newN;
+  if (sel.posPick === oldN) sel.posPick = newN;
+  if (S.platoonSwap){
+    moveList(S.platoonSwap.field);
+    if (S.platoonSwap.spots) for (var sp4 in S.platoonSwap.spots)
+      if (S.platoonSwap.spots[sp4] === oldN) S.platoonSwap.spots[sp4] = newN;
+  }
   season.forEach(function(g){
     [g.stats, g.qbs, g.posSnaps, g.names].forEach(moveKey);
     moveList(g.starters);
@@ -971,6 +1005,11 @@ var SPOT_NAME = {C:'Snapper', X:'Wide', Y:'Slot', Z:'Outside', Q:'QB', R:'Back',
                  S1:'Safety 1', S2:'Safety 2'};
 function spotOf(n){
   for (var k in S.spots) if (S.spots[k] === n) return k;
+  return null;
+}
+// Same lookup, but against an arbitrary {spot:num} map (the wizard's in-progress picks).
+function spotOf2(n, map){
+  for (var k in map) if (map[k] === n) return k;
   return null;
 }
 function spotsFilled(){ return OFF_SPOTS.filter(function(k){ return S.spots[k] != null; }); }
@@ -1213,14 +1252,39 @@ function randomStart(){
   }
   return out;
 }
-function setStarters(list){
+// manualSpots: optional {spot:num} picked by hand in the wizard; any spot left
+// out, or whose kid isn't actually on the field, is auto-assigned like before.
+function setStarters(list, manualSpots){
   S.field = list.slice(0, S.fieldSize);
   S.starters = S.field.slice().sort(function(a,c){ return a-c; });
   S.entry = {}; S.exit = {}; S.tick = 0; assign(S.field);
   S.spots = {};
-  placeKids(S.field.slice(), OFF_SPOTS.slice(), true);
-  S.since = 0; sel = {field:null, bench:null, safety:null, start:[]};
+  if (manualSpots) OFF_SPOTS.forEach(function(sp){
+    var n = manualSpots[sp];
+    if (n != null && S.field.indexOf(n) >= 0) S.spots[sp] = n;
+  });
+  var placed = {}; for (var sp2 in S.spots) placed[S.spots[sp2]] = true;
+  placeKids(S.field.filter(function(n){ return !placed[n]; }), openSpots(), true);
+  S.since = 0; sel = {field:null, bench:null, safety:null, start:[], defStart:[], offSpots:{}, posPick:null};
   render(); save();
+}
+// The one-time swap to the other platoon's starters, right at the first change
+// of possession. After this, it's one shared rotating group like always.
+function swapToUnit(list, manualSpots){
+  var valid = list.filter(function(n){ return S.present.indexOf(n) >= 0; });
+  if (!valid.length) return;
+  release(S.field);
+  S.field = valid.slice(0, S.fieldSize);
+  assign(S.field);
+  S.spots = {};
+  if (manualSpots) OFF_SPOTS.forEach(function(sp){
+    var n = manualSpots[sp];
+    if (n != null && S.field.indexOf(n) >= 0) S.spots[sp] = n;
+  });
+  fillField();
+  var placed = {}; for (var sp3 in S.spots) placed[S.spots[sp3]] = true;
+  placeKids(S.field.filter(function(n){ return !placed[n]; }), openSpots(), true);
+  pickQb();
 }
 
 function suggest(){
@@ -1370,6 +1434,13 @@ function flipSide(){
   S.mode = S.mode === 'offense' ? 'defense' : 'offense';
   S.down = 1;
   S.series = (S.series || 1) + 1;
+  // First change of possession of the game: swap in the other platoon's
+  // starters (and offensive positions, if that's the side coming on). One-time
+  // only — after this the whole team shares one rotation like always.
+  if (S.platoonSwap){
+    swapToUnit(S.platoonSwap.field, S.platoonSwap.spots);
+    S.platoonSwap = null;
+  }
   // Opening series: sub at the break instead of mid-drive, so the whole team
   // gets on the field early.
   if (openingSeries()) S.since = S.interval;
@@ -1465,8 +1536,26 @@ function startGame(){
   undoStack = [];
   pending = { inL: [], outL: [], auto: true };
   syncFieldSize();
-  var picks = sel.start.filter(function(n){ return S.present.indexOf(n) >= 0; });
-  setStarters(picks.length === S.fieldSize ? picks.slice().sort(function(a,c){return a-c;}) : randomStart());
+  function validPicks(l){
+    var p = (l || []).filter(function(n){ return S.present.indexOf(n) >= 0; });
+    return p.length === S.fieldSize ? p.slice().sort(function(a,c){return a-c;}) : null;
+  }
+  S.offStart = validPicks(sel.start) || randomStart();
+  S.defStart = validPicks(sel.defStart) || S.offStart.slice();
+  S.offSpotsStart = {};
+  OFF_SPOTS.forEach(function(sp){
+    var n = sel.offSpots[sp];
+    if (n != null && S.offStart.indexOf(n) >= 0) S.offSpotsStart[sp] = n;
+  });
+  var onOffense = S.mode === 'offense';
+  var firstList = onOffense ? S.offStart : S.defStart;
+  var firstSpots = onOffense ? S.offSpotsStart : null;
+  var secondList = onOffense ? S.defStart : S.offStart;
+  var secondSpots = onOffense ? null : S.offSpotsStart;
+  var sameUnit = firstList.slice().sort(function(a,c){return a-c;}).join(',') ===
+                 secondList.slice().sort(function(a,c){return a-c;}).join(',');
+  S.platoonSwap = sameUnit ? null : {field: secondList.slice(), spots: secondSpots};
+  setStarters(firstList, firstSpots);
 }
 function endGame(){
   if (S.play || S.us || S.them){
@@ -1494,8 +1583,8 @@ function endGame(){
   S.field = []; S.starters = []; S.started = null;
   pending = { inL: [], outL: [], auto: true };
   S.present = S.roster.map(function(p){ return p.num; });
-  sel = {field:null, bench:null, safety:null, start:[]};
-  syncFieldSize(); goStep(1);
+  sel = {field:null, bench:null, safety:null, start:[], defStart:[], offSpots:{}, posPick:null};
+  syncFieldSize(); goStep('step1');
   save();
 }
 
@@ -1553,7 +1642,7 @@ function applyIncoming(raw, note){
       p.season.forEach(function(g){ if (!seen[g.id]) season.push(g); });
       season.sort(function(a,c){ return new Date(c.date) - new Date(a.date); });
     }
-    undoStack = []; sel = {field:null, bench:null, safety:null, start:[]};
+    undoStack = []; sel = {field:null, bench:null, safety:null, start:[], defStart:[], offSpots:{}, posPick:null};
     pending = { inL: [], outL: [], auto: true };
     render();                            // prove it renders before it is persisted
     save(); saveSeason();
@@ -1925,8 +2014,8 @@ function render(){
   /* ---- pre-game wizard ---- */
   if (!S.live){
     syncFieldSize();
-    $('stepDots').innerHTML = [1,2,3].map(function(i){
-      return '<span class="' + (i <= wizStep ? 'on' : '') + '"></span>'; }).join('');
+    $('stepDots').innerHTML = WIZ_STEPS.map(function(sid){
+      return '<span class="' + (WIZ_STEPS.indexOf(sid) <= WIZ_STEPS.indexOf(wizStep) ? 'on' : '') + '"></span>'; }).join('');
 
     $('wizAtt').innerHTML = S.roster.map(function(p){
       var here = S.present.indexOf(p.num) >= 0;
@@ -1952,8 +2041,50 @@ function render(){
     $('wizStartMeta').textContent = sel.start.length + ' of ' + S.fieldSize + ' picked';
     $('btnStep2').disabled = sel.start.length !== S.fieldSize;
     $('btnStep2').textContent = sel.start.length === S.fieldSize
-      ? 'Next: ' + sel.start.slice().sort(function(a,c){return a-c;}).join(', ') + ' start'
+      ? 'Next: pick the defense'
       : 'Tap ' + (S.fieldSize - sel.start.length) + ' more';
+
+    var posReady = sel.start.length === S.fieldSize;
+    $('wizPosWrap').classList.toggle('hide', !posReady);
+    if (posReady){
+      var rows = [['C','X','Y','Z'], ['R','Q']];
+      var sgHtml = '';
+      rows.forEach(function(row){
+        row.forEach(function(sp){
+          var n = sel.offSpots[sp], back = row.length === 2 ? ' back' : '';
+          var cls = 'spot' + back + (n == null ? ' empty' : '') +
+            (n != null && n === sel.posPick ? ' pick' : '');
+          sgHtml += '<button class="' + cls + '" data-posspot="' + sp + '">' +
+            '<u>' + sp + '</u>' +
+            (n == null ? '<b>&mdash;</b><i>auto</i>'
+                       : '<b>' + (+n) + '</b><i>' + esc(nameOf(n) || SPOT_NAME[sp]) + '</i>') +
+            '</button>';
+        });
+      });
+      $('wizSpotGrid').innerHTML = sgHtml;
+      var placedKids = {}; for (var wsp in sel.offSpots) placedKids[sel.offSpots[wsp]] = true;
+      $('wizSpotKids').innerHTML = sel.start.slice().sort(function(a,c){return a-c;}).map(function(n){
+        var placed = !!placedKids[n], picked = sel.posPick === n;
+        var nm = nameOf(n);
+        return '<button class="chip' + (picked?' pick':'') + '" style="opacity:' + (placed?.4:1) + '" data-poskid="' + n + '">' +
+          (nm ? '<s>' + (placed ? spotOf2(n, sel.offSpots) : ' ') + '</s>' : '') +
+          '<b>' + n + '</b><i>' + esc(nm || (placed ? spotOf2(n, sel.offSpots) : ' ')) + '</i></button>';
+      }).join('');
+    }
+
+    $('wizDef').innerHTML = order().map(function(n){
+      var on = sel.defStart.indexOf(n) >= 0;
+      var pn = S.roster.filter(function(r){ return r.num === n; })[0];
+      var nm = pn && pn.name ? pn.name.trim() : '';
+      return '<button class="chip ' + (on?'pick':'') + '" data-st2="' + n + '">' +
+        (nm ? '<s>' + (on?'starts':'&nbsp;') + '</s>' : '') +
+        '<b>' + n + '</b><i>' + esc(nm || (on?'starts':' ')) + '</i></button>';
+    }).join('');
+    $('wizDefMeta').textContent = sel.defStart.length + ' of ' + S.fieldSize + ' picked';
+    $('btnStep2b').disabled = sel.defStart.length !== S.fieldSize;
+    $('btnStep2b').textContent = sel.defStart.length === S.fieldSize
+      ? 'Next: set the rotation'
+      : 'Tap ' + (S.fieldSize - sel.defStart.length) + ' more';
 
     $('wSubSize').textContent = S.subSize;
     $('wInterval').textContent = S.interval;
@@ -2293,11 +2424,12 @@ function switchTab(id){
   window.scrollTo(0,0);
   render();
 }
-var wizStep = 1;
-function goStep(n){
-  wizStep = n;
-  ['step1','step2','step3'].forEach(function(id,i){
-    $(id).classList.toggle('hide', i+1 !== n);
+var WIZ_STEPS = ['step1','step2','step2b','step3'];
+var wizStep = 'step1';
+function goStep(id){
+  wizStep = id;
+  WIZ_STEPS.forEach(function(sid){
+    $(sid).classList.toggle('hide', sid !== id);
   });
   window.scrollTo(0,0);
   render();
@@ -2429,6 +2561,34 @@ document.addEventListener('click', function(e){
     if (sel.start.indexOf(sn) >= 0) sel.start = sel.start.filter(function(x){ return x !== sn; });
     else if (sel.start.length < S.fieldSize) sel.start.push(sn);
     else { sel.start.shift(); sel.start.push(sn); }
+    // drop any position pick for a kid no longer in the offense lineup
+    for (var osp in sel.offSpots)
+      if (sel.start.indexOf(sel.offSpots[osp]) < 0) delete sel.offSpots[osp];
+    if (sel.posPick != null && sel.start.indexOf(sel.posPick) < 0) sel.posPick = null;
+    return render();
+  }
+  if (t.dataset.st2){
+    var sn2 = +t.dataset.st2;
+    if (sel.defStart.indexOf(sn2) >= 0) sel.defStart = sel.defStart.filter(function(x){ return x !== sn2; });
+    else if (sel.defStart.length < S.fieldSize) sel.defStart.push(sn2);
+    else { sel.defStart.shift(); sel.defStart.push(sn2); }
+    return render();
+  }
+  if (t.dataset.poskid){
+    var pk = +t.dataset.poskid;
+    sel.posPick = sel.posPick === pk ? null : pk;
+    return render();
+  }
+  if (t.dataset.posspot){
+    var psp = t.dataset.posspot;
+    if (sel.posPick != null){
+      for (var osp2 in sel.offSpots) if (sel.offSpots[osp2] === sel.posPick) delete sel.offSpots[osp2];
+      sel.offSpots[psp] = sel.posPick;
+      sel.posPick = null;
+    } else if (sel.offSpots[psp] != null){
+      sel.posPick = sel.offSpots[psp];
+      delete sel.offSpots[psp];
+    }
     return render();
   }
   if (t.dataset.slot){
@@ -2439,7 +2599,8 @@ document.addEventListener('click', function(e){
       $('schedMeta').textContent = 'Finish game ' + S.slot + ' first';
       return;
     }
-    S.slot = wn; sel.start = []; goStep(1); save();
+    S.slot = wn; sel.start = []; sel.defStart = []; sel.offSpots = {}; sel.posPick = null;
+    goStep('step1'); save();
     return switchTab('tGame');
   }
   if (t.dataset.del){
@@ -2510,11 +2671,25 @@ document.addEventListener('click', function(e){
     case 'btnHalf2':    return guard('to start the second half', startSecondHalf);
     case 'btnClock':    return toggleClock();
     case 'btnClockReset': snapshot('undo clock reset'); S.clock = newClock(); save(); return render();
-    case 'btnStep1': if (!sel.start.length) sel.start = randomStart(); return goStep(2);
-    case 'btnStep2': return goStep(3);
-    case 'btnBack1': return goStep(1);
-    case 'btnBack2': return goStep(2);
-    case 'btnWizRandom': sel.start = randomStart(); return render();
+    case 'btnStep1': if (!sel.start.length) sel.start = randomStart(); return goStep('step2');
+    case 'btnStep2': return goStep('step2b');
+    case 'btnStep2b': return goStep('step3');
+    case 'btnBack1': return goStep('step1');
+    case 'btnBack2': return goStep('step2b');
+    case 'btnBack2b': return goStep('step2');
+    case 'btnWizRandom':
+      sel.start = randomStart(); sel.offSpots = {}; sel.posPick = null; return render();
+    case 'btnWizSpotAuto': {
+      var left = sel.start.filter(function(n){
+        return Object.keys(sel.offSpots).every(function(sp){ return sel.offSpots[sp] !== n; }); });
+      var openSp = OFF_SPOTS.filter(function(sp){ return sel.offSpots[sp] == null; });
+      var filled = assignSpots(left, openSp, true);
+      for (var fsp in filled) sel.offSpots[fsp] = filled[fsp];
+      sel.posPick = null;
+      return render();
+    }
+    case 'btnWizDefSame': sel.defStart = sel.start.slice(); return render();
+    case 'btnWizDefRandom': sel.defStart = randomStart(); return render();
     case 'btnTrigPlay2':  snapshot(); S.trigger = 'plays';       render(); save(); return;
     case 'btnTrigPoss2':  snapshot(); S.trigger = 'possessions'; render(); save(); return;
     case 'btnStart': return guard('to start game ' + S.slot, startGame);
@@ -2641,7 +2816,7 @@ $('backupFile').addEventListener('change', function(e){
       for (var k in data.state) S[k] = data.state[k];
       if (data.season && Array.isArray(data.season)) season = data.season;
       save(); saveSeason();
-      undoStack = []; sel = {field:null, bench:null, safety:null, start:[]};
+      undoStack = []; sel = {field:null, bench:null, safety:null, start:[], defStart:[], offSpots:{}, posPick:null};
       pending = { inL: [], outL: [], auto: true };
       unlocked = false;
       render();
@@ -2664,6 +2839,7 @@ function resetEverything(){
   S = {
     team:'', roster:[], present:[], field:[], stats:{}, entry:{}, exit:{}, qbs:{}, qbNow:null, tick:0,
     starters:[], started:null, live:false,
+    offStart:[], defStart:[], offSpotsStart:{}, platoonSwap:null,
     startSide:'offense', half:1, halfLen:25, clock:null, kickoff:false,
     series:1, openSeries:0, openSubSize:6,
     spots:{}, posSnaps:{}, safeties:{S1:null,S2:null}, onDeck:null, qbTurnUsed:{},
@@ -2673,7 +2849,7 @@ function resetEverything(){
     mode:'offense', play:0, down:1, since:0, us:0, them:0, pat:false,
     weeks:8, slot:1, pin:''
   };
-  season = []; undoStack = []; sel = {field:null, bench:null, safety:null, start:[]};
+  season = []; undoStack = []; sel = {field:null, bench:null, safety:null, start:[], defStart:[], offSpots:{}, posPick:null};
   pending = { inL: [], outL: [], auto: true };
   for (var i=1;i<=12;i++) S.roster.push({num:i, name:''});
   S.present = S.roster.map(function(p){ return p.num; });
@@ -2683,7 +2859,7 @@ function resetEverything(){
   $('resetConfirm').value = '';
   $('resetBox').classList.add('hide');
   $('btnResetReveal').classList.remove('hide');
-  switchTab('tGame'); goStep(1);
+  switchTab('tGame'); goStep('step1');
   render();
 }
 
