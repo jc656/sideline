@@ -26,6 +26,21 @@ publicly isn't something to do without the team's sign-off. Keep them local-only
 when regenerating or extending plays; if the digital playbook needs updating,
 work from the PDFs on disk, don't assume they're available in a fresh clone.
 
+`playbook-pdf-gen.py` (committed, since it's just code) regenerates the cover/
+index pages and individual play pages of `Commanders-Offense.pdf` and
+`Commanders-Coach-Pack.pdf` to match their established visual style (colors,
+fonts, chip/badge look, field-diagram convention) — written when DRAW and HB
+OPTION were added, since no original generator script existed in the repo.
+Pages that didn't need changes were preserved byte-for-byte via `pypdf`; only
+the pages that needed new rows/plays were regenerated and spliced back in. Note:
+pages that were left untouched on that pass still say "of 14" / "of 5" in cases
+where the total page count didn't actually change (Coach-Pack) — fine — but for
+Offense.pdf specifically, every untouched page (2-14) still reads "Page N of 14"
+even though the real total is now 16, since only page 1 and the 2 new pages were
+regenerated. Next time a play is added, regenerate all of Offense.pdf's pages
+through the script (not just append) to fix that, or accept the same tradeoff
+again. `Commanders-Defense.pdf` was not touched by this pass.
+
 ## The setting
 
 - 3rd grade rec flag football, 12 kids on the roster, 6 on the field.
